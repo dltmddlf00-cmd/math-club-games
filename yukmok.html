@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>육목 六目</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1b1512;
+    --bg-2:#241c18;
+    --wood-light:#dcb87c;
+    --wood-mid:#c69a5c;
+    --wood-dark:#9c723f;
+    --ink:#3b2a1a;
+    --cream:#f3ead9;
+    --cream-dim:#c9bda7;
+    --black-a:#6a6a6a; --black-b:#0a0a0a;
+    --white-a:#ffffff; --white-b:#cfc7b3;
+    --red-a:#e2764f; --red-b:#8f2a14;
+    --teal:#2f7a78;
+    --teal-dim:#1e5250;
+    --danchung-red:#b3402e;
+    --marker:#ffce6b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #2c221c 0%, var(--bg) 55%),
+      var(--bg);
+    color:var(--cream);
+    font-family:'Noto Sans KR', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 14px 60px;
+  }
+  h1,h2,h3{font-family:'Noto Serif KR', serif; margin:0;}
+
+  /* ---------- MENU SCREEN ---------- */
+  #menu{
+    width:100%;
+    max-width:640px;
+    text-align:center;
+    animation:fadeIn .5s ease;
+  }
+  #menu .eyebrow{
+    letter-spacing:.35em;
+    font-size:12px;
+    color:var(--wood-mid);
+    margin-bottom:10px;
+  }
+  #menu h1{
+    font-size:56px;
+    font-weight:900;
+    color:var(--cream);
+    text-shadow:0 2px 0 rgba(0,0,0,.4);
+    letter-spacing:.06em;
+  }
+  #menu .sub{
+    margin-top:10px;
+    color:var(--cream-dim);
+    font-size:15px;
+    line-height:1.7;
+  }
+  .rule-strip{
+    margin:22px auto 30px;
+    max-width:520px;
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    flex-wrap:wrap;
+    font-size:13px;
+    color:var(--cream-dim);
+  }
+  .rule-strip span{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+  .rule-strip b{color:var(--wood-light);}
+
+  .mode-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin-top:8px;
+  }
+  @media(max-width:620px){ .mode-grid{grid-template-columns:1fr;} }
+
+  .mode-card{
+    background:linear-gradient(160deg, var(--bg-2), #1a1411);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    padding:22px 16px 18px;
+    text-align:left;
+    position:relative;
+    overflow:hidden;
+    cursor:pointer;
+    transition:transform .18s ease, border-color .18s ease;
+  }
+  .mode-card:hover{ transform:translateY(-4px); border-color:rgba(255,255,255,.2); }
+  .mode-card .stripe{ position:absolute; top:0; left:0; right:0; height:5px; }
+  .mode-card.m2p .stripe{ background:linear-gradient(90deg,#0a0a0a 50%, #efe9dc 50%); }
+  .mode-card.mai .stripe{ background:var(--teal); }
+  .mode-card.m3p .stripe{ background:linear-gradient(90deg,#0a0a0a 33%, #efe9dc 33% 66%, var(--red-b) 66%); }
+  .mode-card h3{ font-size:19px; margin:12px 0 8px; color:var(--cream); }
+  .mode-card p{ font-size:13px; color:var(--cream-dim); line-height:1.6; margin:0 0 16px; min-height:58px; }
+  .mode-card .dots{ display:flex; gap:6px; margin-bottom:14px; }
+  .dot{ width:14px; height:14px; border-radius:50%; box-shadow:inset 0 -2px 3px rgba(0,0,0,.4), 0 1px 1px rgba(255,255,255,.15); }
+  .dot.b{ background:radial-gradient(circle at 35% 30%, var(--black-a), var(--black-b) 70%); }
+  .dot.w{ background:radial-gradient(circle at 35% 30%, var(--white-a), var(--white-b) 70%); }
+  .dot.r{ background:radial-gradient(circle at 35% 30%, var(--red-a), var(--red-b) 70%); }
+
+  .start-btn{
+    display:inline-block;
+    font-family:'Noto Sans KR';
+    font-weight:700;
+    font-size:13px;
+    color:var(--cream);
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);
+    padding:8px 14px;
+    border-radius:8px;
+  }
+  .mode-card:hover .start-btn{ background:var(--teal); border-color:var(--teal); }
+
+  /* ---------- GAME SCREEN ---------- */
+  #game{ display:none; width:100%; max-width:640px; flex-direction:column; align-items:center; }
+  .topbar{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+    gap:10px;
+  }
+  .topbar .back{
+    font-size:13px; color:var(--cream-dim); cursor:pointer;
+    border:1px solid rgba(255,255,255,.12); padding:7px 12px; border-radius:8px;
+    background:rgba(255,255,255,.04);
+    white-space:nowrap;
+  }
+  .topbar .back:hover{ color:var(--cream); border-color:rgba(255,255,255,.3); }
+  .topbar h2{ font-size:17px; color:var(--wood-light); }
+
+  #status{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:14px;
+    min-height:40px;
+    font-size:15px;
+  }
+  .turn-chip{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    padding:8px 16px;
+    border-radius:30px;
+  }
+  .turn-chip .stone-mini{ width:16px; height:16px; border-radius:50%; }
+  .turn-chip b{ color:var(--wood-light); }
+  .left-count{
+    font-size:12px;
+    background:var(--teal-dim);
+    color:var(--cream);
+    padding:3px 9px;
+    border-radius:10px;
+    font-weight:700;
+  }
+
+  #board-wrap{
+    position:relative;
+    width:min(92vw,560px);
+    aspect-ratio:1/1;
+    border-radius:8px;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.035) 0 2px, transparent 2px 26px),
+      linear-gradient(135deg, var(--wood-light), var(--wood-mid) 45%, var(--wood-dark));
+    box-shadow:0 14px 30px rgba(0,0,0,.45), inset 0 0 0 2px rgba(0,0,0,.25), inset 0 0 40px rgba(0,0,0,.18);
+    touch-action:manipulation;
+  }
+  #board-wrap.center-only::after{
+    content:"";
+  }
+  svg#board{ width:100%; height:100%; display:block; }
+  .hit{ fill:transparent; cursor:pointer; }
+  .hit:hover{ fill:rgba(255,255,255,.14); }
+  .hit.disabled{ cursor:default; }
+  .hit.center-glow{ fill:rgba(179,64,46,.35); animation:pulse 1.4s infinite; }
+
+  .controls{
+    display:flex; gap:10px; margin-top:16px;
+  }
+  .ctrl-btn{
+    font-family:'Noto Sans KR'; font-weight:700; font-size:13px;
+    color:var(--cream); background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14); padding:9px 16px; border-radius:9px; cursor:pointer;
+  }
+  .ctrl-btn:hover{ background:rgba(255,255,255,.14); }
+
+  /* ---------- OVERLAY ---------- */
+  #overlay{
+    position:fixed; inset:0; background:rgba(10,7,5,.72);
+    display:none; align-items:center; justify-content:center; z-index:20;
+    animation:fadeIn .25s ease;
+  }
+  #overlay .card{
+    background:linear-gradient(160deg, #2a2119, #1a1411);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:34px 30px;
+    text-align:center;
+    width:min(86vw,360px);
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  #overlay .stone-big{ width:44px; height:44px; border-radius:50%; margin:0 auto 14px; box-shadow:0 4px 10px rgba(0,0,0,.4); }
+  #overlay h2{ font-size:24px; color:var(--wood-light); margin-bottom:6px; }
+  #overlay p{ color:var(--cream-dim); font-size:13px; margin-bottom:22px; }
+  #overlay .row{ display:flex; gap:10px; justify-content:center; }
+
+  #difficultyOverlay{
+    position:fixed; inset:0; background:rgba(10,7,5,.72);
+    display:none; align-items:center; justify-content:center; z-index:20;
+    animation:fadeIn .25s ease;
+  }
+  #difficultyOverlay .card{
+    background:linear-gradient(160deg, #2a2119, #1a1411);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:30px 26px;
+    text-align:center;
+    width:min(88vw,380px);
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  #difficultyOverlay h2{ font-size:22px; color:var(--wood-light); margin-bottom:6px; }
+  #difficultyOverlay > .card > p{ color:var(--cream-dim); font-size:13px; margin-bottom:18px; }
+  .diff-list{ display:flex; flex-direction:column; gap:10px; }
+  .diff-btn{
+    text-align:left;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:10px;
+    padding:12px 14px;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .diff-btn:hover{ background:var(--teal-dim); border-color:var(--teal); }
+  .diff-btn b{ display:block; font-size:15px; color:var(--cream); margin-bottom:3px; }
+  .diff-btn span{ font-size:12px; color:var(--cream-dim); }
+  .diff-btn.selected{ background:var(--teal-dim); border-color:var(--teal); }
+
+  .option-group{ text-align:left; margin-bottom:18px; }
+  .option-label{ font-size:11px; color:var(--wood-light); letter-spacing:.08em; margin-bottom:8px; font-weight:700; }
+  .choice-row{ display:flex; gap:10px; }
+  .choice-btn{
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+    border-radius:10px; padding:10px 12px; cursor:pointer; font-size:13px; color:var(--cream-dim);
+  }
+  .choice-btn .dot{ width:16px; height:16px; flex-shrink:0; }
+  .choice-btn:hover{ border-color:rgba(255,255,255,.3); }
+  .choice-btn.selected{ background:var(--teal-dim); border-color:var(--teal); color:var(--cream); }
+
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  @keyframes pulse{ 0%,100%{opacity:.35;} 50%{opacity:.75;} }
+  @keyframes place{ from{transform:scale(0.2); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .stone-anim{ transform-origin:center; animation:place .18s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes ringPulse{ 0%,100%{opacity:1;} 50%{opacity:.45;} }
+  .recent-ring{ fill:none; pointer-events:none; }
+  .recent-ring.latest{ animation:ringPulse 1.1s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <div class="eyebrow">CONNECT SIX</div>
+  <h1>육목 六目</h1>
+  <p class="sub">번갈아 두 개씩 놓아 여섯 개를 먼저 이으면 승리하는 오목의 확장판</p>
+
+  <div class="rule-strip">
+    <span>첫 수는 <b>가운데</b>에 1개</span>
+    <span>이후 매 턴 <b>2개씩</b></span>
+    <span><b>6개</b> 연결 시 승리</span>
+  </div>
+
+  <div class="mode-grid">
+    <div class="mode-card m2p" onclick="startGame('2p')">
+      <div class="stripe"></div>
+      <div class="dots"><div class="dot b"></div><div class="dot w"></div></div>
+      <h3>2인 대전</h3>
+      <p>한 화면에서 흑돌과 백돌이 번갈아 두는 기본 모드예요.</p>
+      <div class="start-btn">시작하기 →</div>
+    </div>
+    <div class="mode-card mai" onclick="showDifficultyPicker()">
+      <div class="stripe"></div>
+      <div class="dots"><div class="dot b"></div><div class="dot w"></div></div>
+      <h3>AI와 대전</h3>
+      <p>내가 둘 돌 색과 컴퓨터 난이도를 직접 골라서 대전할 수 있어요.</p>
+      <div class="start-btn">설정하고 시작 →</div>
+    </div>
+    <div class="mode-card m3p" onclick="startGame('3p')">
+      <div class="stripe"></div>
+      <div class="dots"><div class="dot b"></div><div class="dot w"></div><div class="dot r"></div></div>
+      <h3>3인 심화전</h3>
+      <p>흑·백·적 세 명이 순서대로 두는 변형 모드. 견제가 훨씬 치열해져요.</p>
+      <div class="start-btn">시작하기 →</div>
+    </div>
+  </div>
+</div>
+
+<div id="game">
+  <div class="topbar">
+    <div class="back" onclick="backToMenu()">← 메인으로</div>
+    <h2 id="modeTitle"></h2>
+    <div class="back" onclick="resetGame()">다시하기</div>
+  </div>
+  <div id="status"></div>
+  <div id="board-wrap">
+    <svg id="board" viewBox="0 0 100 100"></svg>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="card">
+    <div class="stone-big" id="overlayStone"></div>
+    <h2 id="overlayTitle"></h2>
+    <p id="overlaySub"></p>
+    <div class="row">
+      <div class="ctrl-btn" onclick="resetGame()">다시하기</div>
+      <div class="ctrl-btn" onclick="backToMenu()">메인으로</div>
+    </div>
+  </div>
+</div>
+
+<div id="difficultyOverlay">
+  <div class="card">
+    <h2>AI와 대전 설정</h2>
+    <p>내가 둘 돌 색과 컴퓨터의 난이도를 골라주세요.</p>
+
+    <div class="option-group">
+      <div class="option-label">내 돌 색</div>
+      <div class="choice-row" id="colorChoices">
+        <div class="choice-btn selected" data-color="black" onclick="pickColor('black')">
+          <div class="dot b"></div><span>흑돌 (선공)</span>
+        </div>
+        <div class="choice-btn" data-color="white" onclick="pickColor('white')">
+          <div class="dot w"></div><span>백돌 (후공)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <div class="option-label">난이도</div>
+      <div class="diff-list" id="diffChoices">
+        <div class="diff-btn" data-diff="easy" onclick="pickDifficultyChoice('easy')">
+          <b>쉬움</b><span>가끔 허술한 수를 두는 초심자용</span>
+        </div>
+        <div class="diff-btn selected" data-diff="medium" onclick="pickDifficultyChoice('medium')">
+          <b>보통</b><span>공격과 수비를 균형 있게 계산</span>
+        </div>
+        <div class="diff-btn" data-diff="hard" onclick="pickDifficultyChoice('hard')">
+          <b>어려움</b><span>승리 기회와 위험을 최우선으로 판단</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="ctrl-btn" onclick="document.getElementById('difficultyOverlay').style.display='none'">취소</div>
+      <div class="ctrl-btn" style="background:var(--teal); border-color:var(--teal);" onclick="confirmAIStart()">시작하기</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ 설정 ============ */
+const N = 19;                 // 19x19 정식 바둑판
+const MARGIN = 6;
+const STEP = (100 - MARGIN*2) / (N-1);
+const CENTER = Math.floor(N/2);
+const STARS = [3,9,15];       // 화점 위치 (19줄 기준)
+
+const STONE_STYLE = {
+  black:{a:'var(--black-a)', b:'var(--black-b)', label:'흑돌'},
+  white:{a:'var(--white-a)', b:'var(--white-b)', label:'백돌'},
+  red:  {a:'var(--red-a)',   b:'var(--red-b)',   label:'적돌'}
+};
+
+const MODE_CONFIG = {
+  '2p': { title:'2인 대전', players:[
+            {id:1,color:'black',name:'흑돌'},
+            {id:2,color:'white',name:'백돌'}] },
+  'ai': { title:'AI와 대전' }, // 플레이어 구성은 선택한 색상에 따라 동적으로 생성
+  '3p': { title:'3인 심화전', players:[
+            {id:1,color:'black',name:'흑돌'},
+            {id:2,color:'white',name:'백돌'},
+            {id:3,color:'red',name:'적돌'}] }
+};
+
+function buildAIPlayers(){
+  // 선(흑돌)이 항상 먼저 두므로, 사람이 백돌을 고르면 컴퓨터가 흑돌로 선공을 잡는다
+  return selectedColor === 'black'
+    ? [{id:1,color:'black',name:'나 (흑돌)'},
+       {id:2,color:'white',name:'컴퓨터 (백돌)', isAI:true}]
+    : [{id:1,color:'black',name:'컴퓨터 (흑돌)', isAI:true},
+       {id:2,color:'white',name:'나 (백돌)'}];
+}
+
+/* ============ 상태 ============ */
+let state = null;
+let selectedDifficulty = 'medium';
+let selectedColor = 'black';
+const DIFF_LABEL = { easy:'쉬움', medium:'보통', hard:'어려움' };
+const COLOR_LABEL = { black:'흑돌', white:'백돌' };
+
+function freshState(mode){
+  const players = mode==='ai' ? buildAIPlayers() : MODE_CONFIG[mode].players;
+  return {
+    mode,
+    players,
+    board: Array.from({length:N}, ()=>Array(N).fill(0)), // 0=empty, else player.id
+    currentIdx: 0,
+    totalMoves: 0,
+    stonesLeftInTurn: 1,
+    gameOver: false,
+    winLine: null,
+    recentCells: [],
+    difficulty: mode==='ai' ? selectedDifficulty : null
+  };
+}
+
+/* ============ 화면 전환 ============ */
+function showDifficultyPicker(){
+  document.getElementById('difficultyOverlay').style.display = 'flex';
+}
+function pickColor(color){
+  selectedColor = color;
+  document.querySelectorAll('#colorChoices .choice-btn').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.color === color);
+  });
+}
+function pickDifficultyChoice(level){
+  selectedDifficulty = level;
+  document.querySelectorAll('#diffChoices .diff-btn').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.diff === level);
+  });
+}
+function confirmAIStart(){
+  document.getElementById('difficultyOverlay').style.display = 'none';
+  startGame('ai');
+}
+
+function startGame(mode){
+  state = freshState(mode);
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  const title = MODE_CONFIG[mode].title
+    + (mode==='ai' ? ` · ${COLOR_LABEL[selectedColor]} · ${DIFF_LABEL[selectedDifficulty]}` : '');
+  document.getElementById('modeTitle').textContent = title;
+  buildBoardSkeleton();
+  renderAll();
+  maybeTriggerAI(); // 컴퓨터가 선공(흑돌)인 경우 바로 첫 수를 두게 함
+}
+function backToMenu(){
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('menu').style.display = 'block';
+}
+function resetGame(){
+  document.getElementById('overlay').style.display = 'none';
+  startGame(state.mode);
+}
+
+/* ============ 좌표 변환 ============ */
+function pos(i){ return MARGIN + i*STEP; }
+
+/* ============ 보드 뼈대 그리기 (선/화점/히트영역) ============ */
+function buildBoardSkeleton(){
+  const svg = document.getElementById('board');
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // 격자선
+  for(let i=0;i<N;i++){
+    const v = document.createElementNS(ns,'line');
+    v.setAttribute('x1', pos(i)); v.setAttribute('x2', pos(i));
+    v.setAttribute('y1', pos(0)); v.setAttribute('y2', pos(N-1));
+    v.setAttribute('stroke', 'var(--ink)'); v.setAttribute('stroke-width', '0.15'); v.setAttribute('opacity','0.55');
+    svg.appendChild(v);
+    const h = document.createElementNS(ns,'line');
+    h.setAttribute('y1', pos(i)); h.setAttribute('y2', pos(i));
+    h.setAttribute('x1', pos(0)); h.setAttribute('x2', pos(N-1));
+    h.setAttribute('stroke', 'var(--ink)'); h.setAttribute('stroke-width', '0.15'); h.setAttribute('opacity','0.55');
+    svg.appendChild(h);
+  }
+  // 화점
+  STARS.forEach(r=>{
+    STARS.forEach(c=>{
+      const d = document.createElementNS(ns,'circle');
+      d.setAttribute('cx', pos(c)); d.setAttribute('cy', pos(r)); d.setAttribute('r', 0.6);
+      d.setAttribute('fill', 'var(--ink)'); d.setAttribute('opacity','0.6');
+      svg.appendChild(d);
+    });
+  });
+
+  // 승리선 표시용 그룹
+  const winG = document.createElementNS(ns,'g'); winG.id='winGroup';
+  svg.appendChild(winG);
+
+  // 히트 영역 + 돌 그룹
+  const stoneG = document.createElementNS(ns,'g'); stoneG.id='stoneGroup';
+  svg.appendChild(stoneG);
+
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const hit = document.createElementNS(ns,'circle');
+      hit.setAttribute('cx', pos(c)); hit.setAttribute('cy', pos(r));
+      hit.setAttribute('r', STEP*0.46);
+      hit.setAttribute('class','hit');
+      hit.dataset.r = r; hit.dataset.c = c;
+      hit.addEventListener('click', ()=>onCellClick(r,c));
+      svg.appendChild(hit);
+    }
+  }
+}
+
+/* ============ 렌더링 ============ */
+function renderAll(){
+  renderStones();
+  renderHitStates();
+  renderStatus();
+  renderWinLine();
+}
+
+function renderStones(){
+  const svg = document.getElementById('board');
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.getElementById('stoneGroup');
+  g.innerHTML = '';
+  // 그라디언트 정의 (한 번만)
+  ensureDefs();
+
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const pid = state.board[r][c];
+      if(!pid) continue;
+      const player = state.players.find(p=>p.id===pid);
+      const circle = document.createElementNS(ns,'circle');
+      circle.setAttribute('cx', pos(c)); circle.setAttribute('cy', pos(r));
+      circle.setAttribute('r', STEP*0.42);
+      circle.setAttribute('fill', `url(#grad-${player.color})`);
+      circle.setAttribute('stroke','rgba(0,0,0,.35)');
+      circle.setAttribute('stroke-width','0.15');
+      circle.classList.add('stone-anim');
+      g.appendChild(circle);
+    }
+  }
+
+  renderRecentMarkers(g, ns);
+}
+
+function renderRecentMarkers(g, ns){
+  const cells = state.recentCells;
+  cells.forEach((cell, idx)=>{
+    const isLatest = idx === cells.length - 1;
+    const ring = document.createElementNS(ns,'circle');
+    ring.setAttribute('cx', pos(cell.c)); ring.setAttribute('cy', pos(cell.r));
+    ring.setAttribute('r', STEP*0.42 + 0.9);
+    ring.setAttribute('stroke', 'var(--marker)');
+    ring.setAttribute('stroke-width', isLatest ? '0.6' : '0.4');
+    ring.setAttribute('opacity', isLatest ? '0.95' : '0.5');
+    ring.classList.add('recent-ring');
+    if(isLatest) ring.classList.add('latest');
+    g.appendChild(ring);
+  });
+}
+
+function ensureDefs(){
+  const svg = document.getElementById('board');
+  if(svg.querySelector('defs')) return;
+  const ns='http://www.w3.org/2000/svg';
+  const defs = document.createElementNS(ns,'defs');
+  Object.entries(STONE_STYLE).forEach(([key,val])=>{
+    const grad = document.createElementNS(ns,'radialGradient');
+    grad.setAttribute('id', `grad-${key}`);
+    grad.setAttribute('cx','35%'); grad.setAttribute('cy','30%');
+    const s1 = document.createElementNS(ns,'stop');
+    s1.setAttribute('offset','0%'); s1.setAttribute('stop-color', val.a.replace('var(--','').replace(')','') ? getComputedColor(val.a) : val.a);
+    const s2 = document.createElementNS(ns,'stop');
+    s2.setAttribute('offset','75%'); s2.setAttribute('stop-color', getComputedColor(val.b));
+    grad.appendChild(s1); grad.appendChild(s2);
+    defs.appendChild(grad);
+  });
+  svg.insertBefore(defs, svg.firstChild);
+}
+function getComputedColor(cssVarExpr){
+  // cssVarExpr like 'var(--black-a)' -> resolve to actual color value
+  const m = cssVarExpr.match(/--[a-zA-Z0-9-]+/);
+  if(!m) return cssVarExpr;
+  return getComputedStyle(document.documentElement).getPropertyValue(m[0]).trim() || cssVarExpr;
+}
+
+function renderHitStates(){
+  const hits = document.querySelectorAll('.hit');
+  const firstMove = state.totalMoves === 0;
+  hits.forEach(h=>{
+    const r = +h.dataset.r, c = +h.dataset.c;
+    h.classList.remove('disabled','center-glow');
+    if(state.gameOver || state.board[r][c] !== 0){
+      h.classList.add('disabled');
+      h.style.pointerEvents = 'none';
+      return;
+    }
+    if(firstMove){
+      if(r===CENTER && c===CENTER){
+        h.classList.add('center-glow');
+        h.style.pointerEvents = 'auto';
+      } else {
+        h.classList.add('disabled');
+        h.style.pointerEvents = 'none';
+      }
+      return;
+    }
+    h.style.pointerEvents = 'auto';
+  });
+}
+
+function renderStatus(){
+  const el = document.getElementById('status');
+  if(state.gameOver){ el.innerHTML = ''; return; }
+  const p = state.players[state.currentIdx];
+  const style = STONE_STYLE[p.color];
+  el.innerHTML = `
+    <div class="turn-chip">
+      <div class="stone-mini" style="background:radial-gradient(circle at 35% 30%, ${style.a}, ${style.b} 70%)"></div>
+      <span><b>${p.name}</b> 차례</span>
+      <span class="left-count">${state.stonesLeftInTurn}개 남음</span>
+    </div>`;
+}
+
+function renderWinLine(){
+  const g = document.getElementById('winGroup');
+  g.innerHTML = '';
+  if(!state.winLine) return;
+  const ns='http://www.w3.org/2000/svg';
+  const [start,end] = [state.winLine[0], state.winLine[state.winLine.length-1]];
+  const line = document.createElementNS(ns,'line');
+  line.setAttribute('x1', pos(start[1])); line.setAttribute('y1', pos(start[0]));
+  line.setAttribute('x2', pos(end[1]));   line.setAttribute('y2', pos(end[0]));
+  line.setAttribute('stroke', 'var(--danchung-red)');
+  line.setAttribute('stroke-width', '1.1');
+  line.setAttribute('stroke-linecap','round');
+  line.setAttribute('opacity','0.85');
+  g.appendChild(line);
+}
+
+/* ============ 클릭 처리 ============ */
+function onCellClick(r,c){
+  if(state.gameOver) return;
+  if(state.board[r][c] !== 0) return;
+  const firstMove = state.totalMoves === 0;
+  if(firstMove && (r!==CENTER || c!==CENTER)) return;
+  const player = state.players[state.currentIdx];
+  if(player.isAI) return; // AI 턴에는 클릭 무시
+
+  placeStone(r,c,player.id);
+}
+
+function placeStone(r,c,pid){
+  state.board[r][c] = pid;
+  state.totalMoves++;
+  state.stonesLeftInTurn--;
+
+  state.recentCells.push({r,c});
+  if(state.recentCells.length > 2) state.recentCells.shift();
+
+  const win = checkWin(r,c,pid);
+  if(win){
+    state.gameOver = true;
+    state.winLine = win;
+    renderAll();
+    showOverlay(pid);
+    return;
+  }
+  if(isBoardFull()){
+    state.gameOver = true;
+    renderAll();
+    showOverlay(null);
+    return;
+  }
+
+  if(state.stonesLeftInTurn <= 0){
+    nextTurn();
+  }
+  renderAll();
+}
+
+function nextTurn(){
+  state.currentIdx = (state.currentIdx + 1) % state.players.length;
+  state.stonesLeftInTurn = 2;
+  maybeTriggerAI();
+}
+
+function maybeTriggerAI(){
+  const current = state.players[state.currentIdx];
+  if(!state.gameOver && current && current.isAI){
+    setTimeout(()=>aiTakeTurn(), 420);
+  }
+}
+
+function isBoardFull(){
+  return state.totalMoves >= N*N;
+}
+
+/* ============ 승리 판정 ============ */
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+function checkWin(r,c,pid){
+  for(const [dr,dc] of DIRS){
+    let line = [[r,c]];
+    // 정방향
+    let rr=r+dr, cc=c+dc;
+    while(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===pid){ line.push([rr,cc]); rr+=dr; cc+=dc; }
+    // 역방향
+    rr=r-dr; cc=c-dc;
+    while(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===pid){ line.unshift([rr,cc]); rr-=dr; cc-=dc; }
+    if(line.length>=6) return line;
+  }
+  return null;
+}
+
+/* ============ 오버레이 ============ */
+function showOverlay(winnerPid){
+  const overlay = document.getElementById('overlay');
+  const stoneEl = document.getElementById('overlayStone');
+  const titleEl = document.getElementById('overlayTitle');
+  const subEl = document.getElementById('overlaySub');
+  if(winnerPid){
+    const player = state.players.find(p=>p.id===winnerPid);
+    const s = STONE_STYLE[player.color];
+    stoneEl.style.background = `radial-gradient(circle at 35% 30%, ${s.a}, ${s.b} 70%)`;
+    titleEl.textContent = `${player.name} 승리!`;
+    subEl.textContent = '여섯 개의 돌이 이어졌습니다.';
+  } else {
+    stoneEl.style.background = 'linear-gradient(135deg,#666,#333)';
+    titleEl.textContent = '무승부';
+    subEl.textContent = '바둑판이 가득 찼습니다.';
+  }
+  overlay.style.display = 'flex';
+}
+
+/* ============ AI 로직 (2인 'ai' 모드 전용, 항상 두 번째 플레이어) ============ */
+function aiTakeTurn(){
+  if(state.gameOver) return;
+  const aiPlayer = state.players[state.currentIdx];
+  if(!aiPlayer.isAI) return; // 안전장치: 사람 턴이면 아무것도 하지 않음
+  const humanPlayer = state.players.find(p=>p.id !== aiPlayer.id);
+  const difficulty = state.difficulty || 'medium';
+
+  const movesToPlay = state.stonesLeftInTurn;
+  for(let i=0;i<movesToPlay;i++){
+    if(state.gameOver) return;
+    if(state.players[state.currentIdx].id !== aiPlayer.id) return; // 턴이 이미 넘어갔으면 중단
+    const best = pickBestCell(aiPlayer.id, humanPlayer.id, difficulty);
+    if(!best) break;
+    placeStone(best.r, best.c, aiPlayer.id);
+  }
+}
+
+/* 특정 자리에 두면 즉시 6목이 완성되는지 검사 (보드를 임시로만 바꿈) */
+function wouldComplete(r,c,pid){
+  state.board[r][c] = pid;
+  const result = checkWin(r,c,pid);
+  state.board[r][c] = 0;
+  return !!result;
+}
+function findDecidingCell(pid){
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(state.board[r][c] !== 0) continue;
+      if(wouldComplete(r,c,pid)) return {r,c};
+    }
+  }
+  return null;
+}
+
+const DIFF_WEIGHTS = {
+  easy:   { off:0.7,  def:0.3  },
+  medium: { off:1.05, def:1.0  },
+  hard:   { off:1.15, def:1.4  }
+};
+
+function pickBestCell(aiId, humanId, difficulty){
+  // 게임의 첫 수는 무조건 가운데 (규칙 1)
+  if(state.totalMoves === 0) return {r:CENTER, c:CENTER};
+
+  // 쉬움: 뻔히 이기는 수와 상대의 확정 승리만 챙기고, 나머지는 기존 돌 주변에서 다소 허술하게 고른다
+  if(difficulty === 'easy'){
+    const win = findDecidingCell(aiId);
+    if(win) return win;
+    const mustBlock = findDecidingCell(humanId);
+    if(mustBlock) return mustBlock;
+
+    const pool = getNearbyEmptyCells(2);
+    const scored = pool.map(({r,c})=>{
+      const offense = evaluateCell(r,c,aiId);
+      const defense = evaluateCell(r,c,humanId);
+      const noise = Math.random()*50; // 약간의 무작위성으로 허술함을 표현
+      return {r,c,score: offense*0.75 + defense*0.2 + noise};
+    });
+    scored.sort((a,b)=>b.score-a.score);
+    const topN = Math.min(5, scored.length);
+    return scored[Math.floor(Math.random()*topN)];
+  }
+
+  // 어려움/보통: 즉시 이길 수 있으면 무조건 그 자리
+  const win = findDecidingCell(aiId);
+  if(win) return win;
+
+  // 어려움: 상대가 다음 수에 이길 수 있으면 반드시 막기
+  if(difficulty === 'hard'){
+    const block = findDecidingCell(humanId);
+    if(block) return block;
+  }
+
+  const w = DIFF_WEIGHTS[difficulty] || DIFF_WEIGHTS.medium;
+  let candidates = [];
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(state.board[r][c] !== 0) continue;
+      const offense = evaluateCell(r,c,aiId);
+      const defense = evaluateCell(r,c,humanId);
+      const centerBias = (r===CENTER && c===CENTER) ? 5 : 0;
+      const score = offense * w.off + defense * w.def + centerBias;
+      candidates.push({r,c,score});
+    }
+  }
+  candidates.sort((a,b)=>b.score-a.score);
+  if(candidates.length === 0) return null;
+  return candidates[0];
+}
+
+/* 기존 돌 주변(반경 radius 칸 이내)의 빈 칸만 모은다 - 동떨어진 무의미한 수를 방지 */
+function getNearbyEmptyCells(radius){
+  const seen = new Set();
+  const list = [];
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(state.board[r][c] === 0) continue;
+      for(let dr=-radius; dr<=radius; dr++){
+        for(let dc=-radius; dc<=radius; dc++){
+          const rr=r+dr, cc=c+dc;
+          if(rr<0||rr>=N||cc<0||cc>=N) continue;
+          if(state.board[rr][cc] !== 0) continue;
+          const key = rr+'_'+cc;
+          if(!seen.has(key)){ seen.add(key); list.push({r:rr,c:cc}); }
+        }
+      }
+    }
+  }
+  return list;
+}
+
+function evaluateCell(r,c,pid){
+  let total = 0;
+  for(const [dr,dc] of DIRS){
+    let forward=0, fOpen=false;
+    let rr=r+dr, cc=c+dc;
+    while(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===pid){ forward++; rr+=dr; cc+=dc; }
+    if(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===0) fOpen=true;
+
+    let backward=0, bOpen=false;
+    rr=r-dr; cc=c-dc;
+    while(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===pid){ backward++; rr-=dr; cc-=dc; }
+    if(rr>=0&&rr<N&&cc>=0&&cc<N&&state.board[rr][cc]===0) bOpen=true;
+
+    const count = forward + backward + 1; // 이 자리에 두었을 때
+    const openEnds = (fOpen?1:0) + (bOpen?1:0);
+    total += lineWeight(count, openEnds);
+  }
+  return total;
+}
+
+function lineWeight(count, openEnds){
+  const base = {1:1, 2:8, 3:60, 4:400, 5:3000, 6:200000}[Math.min(count,6)] || 0;
+  const openFactor = openEnds===2 ? 1.4 : (openEnds===1 ? 1.0 : 0.25);
+  return base * openFactor;
+}
+</script>
+</body>
+</html>
