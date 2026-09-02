@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정수 스트림스 · 타일 뽑기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0F1F28;
+    --bg-panel: #16303D;
+    --line: #2C4A56;
+    --chalk: #F3EFE3;
+    --muted: #92ABB5;
+    --pos: #E8A33D;
+    --neg: #4FC8C0;
+    --zero: #F3EFE3;
+    --joker: #E85DA0;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--chalk);
+    font-family:'Noto Sans KR', sans-serif;
+    overflow: hidden;
+  }
+  body{
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    height:100vh; padding: clamp(16px, 3vh, 40px) clamp(16px, 4vw, 56px);
+  }
+
+  header{
+    width:100%; max-width:1100px;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    flex-shrink:0;
+    gap: 20px;
+  }
+  .left-col{
+    display:flex; flex-direction:column; gap:6px;
+    min-width:0;
+  }
+  .eyebrow{
+    font-size: clamp(12px, 1.3vw, 15px);
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .eyebrow strong{ color: var(--chalk); font-weight:700; letter-spacing:0; text-transform:none; }
+  .composition{
+    font-size: clamp(11px, 1.15vw, 13px);
+    color: var(--muted);
+    line-height:1.5;
+  }
+  .composition b{ color: var(--chalk); font-weight:700; }
+  .progress{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: clamp(14px, 1.6vw, 18px);
+    color: var(--muted);
+    flex-shrink:0;
+    white-space:nowrap;
+  }
+  .progress b{ color: var(--chalk); font-weight:700; }
+
+  main{
+    flex:1; width:100%; max-width:1100px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: clamp(18px, 3vh, 36px);
+    min-height:0;
+  }
+
+  .stage{
+    width:100%;
+    display:flex; align-items:center; justify-content:center;
+    min-height: clamp(140px, 24vh, 220px);
+  }
+  .tile{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size: clamp(72px, 16vw, 168px);
+    line-height:1;
+    font-variant-numeric: tabular-nums;
+    transition: color .25s ease, transform .2s ease;
+    color: var(--chalk);
+  }
+  .tile.pos{ color: var(--pos); }
+  .tile.neg{ color: var(--neg); }
+  .tile.joker{ color: var(--joker); font-size: clamp(64px, 14vw, 140px); }
+  .tile.idle{ color: var(--muted); font-size: clamp(28px, 4vw, 34px); font-weight:500; font-family:'Noto Sans KR', sans-serif; }
+  .tile.pop{ animation: pop .28s ease; }
+  @keyframes pop{ 0%{ transform: scale(0.85); } 60%{ transform: scale(1.05); } 100%{ transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce){
+    .tile{ transition:none; }
+    .tile.pop{ animation:none; }
+    .marker{ transition:none !important; }
+  }
+
+  .numberline{
+    width:100%;
+    position:relative;
+    height: 56px;
+    flex-shrink:0;
+  }
+  .track{
+    position:absolute; left:0; right:0; top:26px; height:2px;
+    background: var(--line);
+  }
+  .tick{
+    position:absolute; top:20px; width:1px; height:14px; background: var(--line);
+  }
+  .tick.major{ height:20px; top:17px; background: var(--muted); }
+  .tick-label{
+    position:absolute; top:38px; transform: translateX(-50%);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color: var(--muted);
+  }
+  .marker{
+    position:absolute; top:2px; width:14px; height:14px; border-radius:50%;
+    transform: translateX(-50%);
+    background: var(--chalk);
+    box-shadow: 0 0 0 4px var(--bg), 0 0 14px rgba(0,0,0,.4);
+    transition: left .4s cubic-bezier(.4,0,.2,1), background .25s ease;
+    opacity:0;
+  }
+  .marker.show{ opacity:1; }
+  .marker.pos{ background: var(--pos); }
+  .marker.neg{ background: var(--neg); }
+
+  .history{
+    width:100%;
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+    max-height: 15vh; overflow-y:auto;
+    padding: 4px 2px;
+  }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:14px;
+    padding: 5px 10px; border-radius:6px;
+    background: var(--bg-panel);
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  .chip.pos{ color: var(--pos); border-color: color-mix(in srgb, var(--pos) 40%, var(--line)); }
+  .chip.neg{ color: var(--neg); border-color: color-mix(in srgb, var(--neg) 40%, var(--line)); }
+  .chip.joker{ color: var(--joker); border-color: color-mix(in srgb, var(--joker) 40%, var(--line)); }
+
+  footer{
+    width:100%; max-width:1100px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+  .draw-btn{
+    font-family:'Noto Sans KR', sans-serif; font-weight:700;
+    font-size: clamp(18px, 2.4vw, 24px);
+    padding: 16px 56px;
+    border-radius: 999px;
+    border: none;
+    background: var(--pos);
+    color: #17222a;
+    cursor:pointer;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .draw-btn:hover{ background:#f0b458; }
+  .draw-btn:active{ transform: scale(.97); }
+  .draw-btn:disabled{ background: var(--line); color: var(--muted); cursor:not-allowed; }
+
+  .sub-actions{
+    display:flex; align-items:center; gap:18px;
+  }
+  .ghost-btn{
+    background:none; border:none; color: var(--muted);
+    font-family:'Noto Sans KR', sans-serif; font-size:14px;
+    text-decoration: underline; text-underline-offset:3px;
+    cursor:pointer;
+  }
+  .ghost-btn:hover{ color: var(--chalk); }
+
+  .done-banner{
+    display:none;
+    text-align:center; color: var(--pos);
+    font-weight:700; font-size: clamp(16px, 2vw, 20px);
+  }
+  .done-banner.show{ display:block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="left-col">
+    <div class="eyebrow">정수 스트림스 &nbsp;·&nbsp; <strong>타일 뽑기</strong></div>
+    <div class="composition">주머니 구성: <b>-14~15</b> 각 1장(30장) + <b>-4~4</b> 추가 1장씩(9장) + <b>조커</b> 1장 = 총 <b>40장</b> · 이번 판은 <b>20장</b>을 뽑아요</div>
+  </div>
+  <div class="progress"><b id="drawCount">0</b> / 20 뽑음 &nbsp;&nbsp;|&nbsp;&nbsp; 주머니에 <b id="remainCount">40</b>장 남음</div>
+</header>
+
+<main>
+  <div class="stage">
+    <div class="tile idle" id="tileDisplay">타일을 뽑아보세요</div>
+  </div>
+
+  <div class="numberline" id="numberline"></div>
+
+  <div class="history" id="history"></div>
+</main>
+
+<footer>
+  <div class="done-banner" id="doneBanner">20칸을 모두 채웠습니다! 워크시트에서 오름차순 구간을 세어 점수를 계산해보세요.</div>
+  <button class="draw-btn" id="drawBtn">타일 뽑기</button>
+  <div class="sub-actions">
+    <button class="ghost-btn" id="resetBtn">주머니 다시 섞기 (다음 반 준비)</button>
+  </div>
+</footer>
+
+<script>
+  const RANGE_MIN = -14, RANGE_MAX = 15;
+  const DUP_MIN = -4, DUP_MAX = 4;
+  const MAX_DRAWS = 20;
+
+  let pool = [];
+  let drawnHistory = [];
+
+  function buildPool(){
+    const arr = [];
+    for(let n = RANGE_MIN; n <= RANGE_MAX; n++) arr.push(n);
+    for(let n = DUP_MIN; n <= DUP_MAX; n++) arr.push(n);
+    arr.push('JOKER');
+    return arr;
+  }
+
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildNumberline(){
+    const line = document.getElementById('numberline');
+    line.innerHTML = '<div class="track"></div>';
+    const span = RANGE_MAX - RANGE_MIN;
+    for(let n = RANGE_MIN; n <= RANGE_MAX; n++){
+      const pct = ((n - RANGE_MIN) / span) * 100;
+      const isMajor = (n % 5 === 0);
+      const tick = document.createElement('div');
+      tick.className = 'tick' + (isMajor ? ' major' : '');
+      tick.style.left = pct + '%';
+      line.appendChild(tick);
+      if(isMajor){
+        const label = document.createElement('div');
+        label.className = 'tick-label';
+        label.style.left = pct + '%';
+        label.textContent = n;
+        line.appendChild(label);
+      }
+    }
+    const marker = document.createElement('div');
+    marker.className = 'marker';
+    marker.id = 'marker';
+    line.appendChild(marker);
+  }
+
+  function moveMarker(value){
+    const marker = document.getElementById('marker');
+    if(value === 'JOKER'){
+      marker.classList.remove('show');
+      return;
+    }
+    const span = RANGE_MAX - RANGE_MIN;
+    const pct = ((value - RANGE_MIN) / span) * 100;
+    marker.style.left = pct + '%';
+    marker.classList.remove('pos','neg');
+    marker.classList.add(value > 0 ? 'pos' : (value < 0 ? 'neg' : ''));
+    marker.classList.add('show');
+  }
+
+  function signClass(value){
+    if(value === 'JOKER') return 'joker';
+    if(value > 0) return 'pos';
+    if(value < 0) return 'neg';
+    return '';
+  }
+
+  function renderTile(value){
+    const el = document.getElementById('tileDisplay');
+    el.classList.remove('idle','pos','neg','joker','pop');
+    void el.offsetWidth;
+    el.textContent = value === 'JOKER' ? '☆' : value;
+    el.classList.add(signClass(value), 'pop');
+  }
+
+  function renderHistory(){
+    const box = document.getElementById('history');
+    box.innerHTML = '';
+    drawnHistory.forEach(v => {
+      const chip = document.createElement('div');
+      chip.className = 'chip ' + signClass(v);
+      chip.textContent = v === 'JOKER' ? '☆' : v;
+      box.appendChild(chip);
+    });
+  }
+
+  function updateCounters(){
+    document.getElementById('drawCount').textContent = drawnHistory.length;
+    document.getElementById('remainCount').textContent = pool.length;
+  }
+
+  function draw(){
+    if(drawnHistory.length >= MAX_DRAWS || pool.length === 0) return;
+    const value = pool.pop();
+    drawnHistory.push(value);
+    renderTile(value);
+    moveMarker(value);
+    renderHistory();
+    updateCounters();
+    if(drawnHistory.length >= MAX_DRAWS){
+      document.getElementById('drawBtn').disabled = true;
+      document.getElementById('doneBanner').classList.add('show');
+    }
+  }
+
+  function resetGame(skipConfirm){
+    if(!skipConfirm && drawnHistory.length > 0 && drawnHistory.length < MAX_DRAWS){
+      if(!confirm('아직 게임이 끝나지 않았습니다. 정말 다시 섞을까요?')) return;
+    }
+    pool = shuffle(buildPool());
+    drawnHistory = [];
+    document.getElementById('tileDisplay').className = 'tile idle';
+    document.getElementById('tileDisplay').textContent = '타일을 뽑아보세요';
+    document.getElementById('marker').classList.remove('show');
+    document.getElementById('drawBtn').disabled = false;
+    document.getElementById('doneBanner').classList.remove('show');
+    renderHistory();
+    updateCounters();
+  }
+
+  document.getElementById('drawBtn').addEventListener('click', draw);
+  document.getElementById('resetBtn').addEventListener('click', () => resetGame(false));
+
+  buildNumberline();
+  resetGame(true);
+</script>
+
+</body>
+</html>
