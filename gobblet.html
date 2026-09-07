@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가블리트 가블러스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --panel: #16212c;
+    --panel-2: #1c2a37;
+    --line: #2c4451;
+    --ink: #f3efe3;
+    --muted: #92abb5;
+    --gold: #f2b705;
+    --ok: #4fc8c0;
+    --danger: #e05353;
+    --p1: #2f6fed; --p1-hi:#a9c6ff; --p1-lo:#1b4fc4;
+    --p2: #e0505a; --p2-hi:#ffb3b8; --p2-lo:#b93540;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
+  body{ background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%); }
+  .wrap{ max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+
+  h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,36px); color:var(--gold); margin:0 0 4px; }
+  .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ---------- setup ---------- */
+  #setup{ max-width:520px; margin:36px auto 0; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 28px; }
+  #setup .hint{ font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+  .seg-label{ font-size:13px; color:var(--muted); font-weight:700; margin:16px 0 8px; }
+  .seg{ display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button{
+    flex:1; min-width:110px; padding:12px 10px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel-2); color:var(--muted); font-family:'Noto Sans KR',sans-serif; font-weight:700;
+    font-size:14px; cursor:pointer;
+  }
+  .seg button.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,183,5,0.08); }
+  #aiOptions{ display:none; }
+  #aiOptions.show{ display:block; }
+  .start-btn{
+    margin-top:26px; width:100%; padding:16px; border:none; border-radius:12px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+  }
+  .start-btn:hover{ background:#ffcb2e; }
+  .rule-toggle{
+    margin-top:18px; background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .rule-toggle:hover{ color:var(--ink); border-color:var(--gold); }
+  #ruleBox{
+    display:none; margin-top:14px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:13.5px; line-height:1.8; color:var(--muted);
+  }
+  #ruleBox.show{ display:block; }
+  #ruleBox b{ color:var(--ink); }
+  #ruleBox ul{ margin:8px 0 0; padding-left:20px; }
+
+  /* ---------- game ---------- */
+  #game{ display:none; }
+  #game.show{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+  .turn-indicator{ display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
+  .turn-dot{ width:16px; height:16px; border-radius:50%; }
+  .turn-dot.p1{ background:linear-gradient(135deg,var(--p1-hi),var(--p1)); }
+  .turn-dot.p2{ background:linear-gradient(135deg,var(--p2-hi),var(--p2)); }
+  .topbar-actions{ display:flex; gap:10px; }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .board-wrap{ display:flex; justify-content:center; margin-bottom:22px; }
+  .board{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    width:min(360px,86vw); aspect-ratio:1;
+  }
+  .cell{
+    background:var(--panel-2); border:2px solid var(--line); border-radius:16px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .cell.valid-target{ border-color:var(--gold); box-shadow:0 0 0 4px rgba(242,183,5,0.2); }
+  .cell.selected-source{ border-color:var(--ok); box-shadow:0 0 0 4px rgba(79,200,192,0.2); }
+  .cell.invalid-flash{ animation: shake .3s ease; border-color:var(--danger); }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-5px); } 75%{ transform:translateX(5px); } }
+  .cell.win-cell{ border-color:var(--gold); background:rgba(242,183,5,0.12); animation: win-pulse 1s ease-in-out infinite; }
+  @keyframes win-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(242,183,5,0.35); } 50%{ box-shadow:0 0 0 8px rgba(242,183,5,0); } }
+  .token.just-moved{ box-shadow:0 0 0 3px var(--ok), 0 2px 5px rgba(0,0,0,.5), inset 0 -2px 3px rgba(0,0,0,.25); }
+
+  .token{ border-radius:50%; flex:0 0 auto; box-shadow:0 2px 5px rgba(0,0,0,.5), inset 0 -2px 3px rgba(0,0,0,.25); }
+  .token.sm{ width:24px; height:24px; }
+  .token.md{ width:38px; height:38px; }
+  .token.lg{ width:54px; height:54px; }
+  .token.p1{ background:radial-gradient(circle at 32% 28%, var(--p1-hi), var(--p1) 55%, var(--p1-lo) 100%); }
+  .token.p2{ background:radial-gradient(circle at 32% 28%, var(--p2-hi), var(--p2) 55%, var(--p2-lo) 100%); }
+
+  .trays{ display:flex; flex-direction:column; gap:14px; margin-bottom:22px; }
+  .tray{
+    display:flex; align-items:center; gap:16px; padding:14px 18px; border-radius:14px;
+    border:2px solid var(--line); background:var(--panel); flex-wrap:wrap;
+  }
+  .tray.active{ border-color:var(--gold); }
+  .tray .tray-name{ font-weight:800; font-size:14px; min-width:64px; }
+  .tray .pieces{ display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; }
+  .piece-group{ display:flex; gap:6px; align-items:flex-end; }
+  .token.selectable{ cursor:pointer; }
+  .token.selectable:hover{ filter:brightness(1.15); }
+  .token.used{ opacity:0.14; filter:grayscale(1); pointer-events:none; }
+  .token.picked{ outline:3px solid var(--gold); outline-offset:2px; }
+
+  .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
+  #log{
+    display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; max-height:150px; overflow-y:auto; font-size:13.5px; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.9; margin-top:10px;
+  }
+  #log.show{ display:block; }
+  #log div:first-child{ color:var(--ink); }
+
+  #result{
+    display:none; position:fixed; inset:0; z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+    background:rgba(6,10,15,0.72); backdrop-filter:blur(2px);
+  }
+  #result.show{ display:flex; }
+  .modal-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:20px;
+    padding:38px 32px 30px; text-align:center; max-width:360px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+    animation: pop-in .22s ease;
+  }
+  @keyframes pop-in{ from{ transform:scale(.86); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .result-emoji{ font-size:52px; line-height:1; margin-bottom:6px; }
+  #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:30px; margin:0 0 10px; }
+  #result p{ color:var(--muted); margin:0 0 22px; font-size:14px; }
+  #undoFromResultBtn{ margin-top:14px; width:100%; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Math Club Games</div>
+  <h1>가블리트 가블러스</h1>
+
+  <div id="setup">
+    <div class="hint">3x3 판에 크기가 다른 말을 놓거나 옮겨서 먼저 한 줄을 완성하면 승리하는 게임이에요. 큰 말로 작은 말을 덮을 수 있고, 내 말을 옮기다가 그 밑에 숨어있던 상대 말이 드러나 상대가 한 줄을 완성하면 그 즉시 상대가 승리합니다.</div>
+
+    <div class="seg-label">대전 방식</div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="2p" class="active">2인 대전</button>
+      <button data-mode="ai">컴퓨터와 대전</button>
+    </div>
+
+    <div id="aiOptions">
+      <div class="seg-label">난이도</div>
+      <div class="seg" id="diffSeg">
+        <button data-diff="easy" class="active">쉬움</button>
+        <button data-diff="normal">보통</button>
+      </div>
+      <div class="seg-label">내 팀</div>
+      <div class="seg" id="teamSeg">
+        <button data-team="1" class="active">파랑 (선공)</button>
+        <button data-team="2">빨강 (후공)</button>
+      </div>
+    </div>
+
+    <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
+    <div id="ruleBox">
+      <b>가블리트 가블러스 규칙</b>
+      <ul>
+        <li>각자 크기가 다른 말 6개(큰 말 2개, 중간 말 2개, 작은 말 2개)를 가지고 시작합니다.</li>
+        <li>자기 차례에는 새 말을 놓거나(빈칸 또는 자기보다 작은 말 위에 덮기), 이미 놓은 내 말을 다른 칸으로 옮길 수 있습니다(이동도 덮어씌우기 가능).</li>
+        <li>큰 말은 작은 말을 완전히 가리므로, 그 밑에 무엇이 있었는지는 다시 들춰보기 전까지 알 수 없습니다.</li>
+        <li>말을 옮겨서 그 밑에 숨어있던 상대 말이 드러났는데 그로 인해 상대가 3줄을 완성하면, 내 차례였더라도 즉시 상대가 승리합니다.</li>
+        <li>가로, 세로, 대각선 중 먼저 한 줄을 완성하는 쪽이 승리합니다.</li>
+      </ul>
+    </div>
+
+    <button class="start-btn" id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <div class="turn-indicator" id="turnIndicator"><span class="turn-dot p1"></span> 파랑 차례</div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="undoBtn" disabled>실행 취소</button>
+        <button class="ghost-btn" id="restartBtn">새 게임</button>
+      </div>
+    </div>
+
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+
+    <div class="trays" id="trays"></div>
+
+    <button class="rule-toggle" id="logToggleBtn">진행 기록 보기</button>
+    <div id="log"></div>
+  </div>
+
+  <div id="result">
+    <div class="modal-card">
+      <div class="result-emoji">🏆</div>
+      <h2 id="resultTitle">파랑 승리!</h2>
+      <p id="resultDesc"></p>
+      <button class="start-btn" id="playAgainBtn">다시 하기</button>
+      <button class="ghost-btn" id="undoFromResultBtn">방금 수 취소하기</button>
+    </div>
+  </div>
+
+  <footer>수학 동아리 · 크기 비교로 배우는 전략 게임</footer>
+</div>
+
+<script>
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const SIZE_CLASS = {1:'sm', 2:'md', 3:'lg'};
+
+  let mode = '2p';
+  let aiDifficulty = 'easy';
+  let humanTeam = 1;
+  let aiPlayer = 2;
+
+  let board = [];
+  let supply = {};
+  let current = 1;
+  let selected = null;
+  let gameOver = false;
+  let winnerPlayer = null;
+  let logEntries = [];
+  let history = [];
+  let flashCell = null;
+  let winLine = null;
+  let lastMoveTo = null;
+
+  function playerName(p){ return p === 1 ? '파랑' : '빨강'; }
+
+  function topOf(cell){ return cell.length ? cell[cell.length - 1] : null; }
+
+  function newBoard(){ return Array.from({length:9}, () => []); }
+  function newSupply(){ return { 1:{1:2,2:2,3:2}, 2:{1:2,2:2,3:2} }; }
+
+  function findWinLine(b){
+    for(const p of [1,2]){
+      for(const line of LINES){
+        if(line.every(i => { const t = topOf(b[i]); return t && t.player === p; })) return { player: p, line };
+      }
+    }
+    return null;
+  }
+  function checkWinnerOnBoard(b){
+    const w = findWinLine(b);
+    return w ? w.player : null;
+  }
+
+  function log(msg){ logEntries.unshift(msg); }
+
+  function snapshot(){
+    return JSON.stringify({ board, supply, current, selected: null, gameOver, winnerPlayer, logEntries, winLine, lastMoveTo });
+  }
+  function pushUndo(){
+    history.push(snapshot());
+    document.getElementById('undoBtn').disabled = false;
+  }
+  function restore(s){
+    const st = JSON.parse(s);
+    board = st.board; supply = st.supply; current = st.current;
+    gameOver = st.gameOver; winnerPlayer = st.winnerPlayer; logEntries = st.logEntries;
+    winLine = st.winLine; lastMoveTo = st.lastMoveTo;
+    selected = null;
+  }
+  function undo(){
+    if(history.length === 0) return;
+    restore(history.pop());
+    if(mode === 'ai' && !gameOver && current === aiPlayer && history.length > 0){
+      restore(history.pop());
+    }
+    document.getElementById('undoBtn').disabled = history.length === 0;
+    render();
+  }
+
+  function startGame(){
+    board = newBoard();
+    supply = newSupply();
+    current = 1;
+    selected = null;
+    gameOver = false;
+    winnerPlayer = null;
+    winLine = null;
+    lastMoveTo = null;
+    logEntries = [];
+    history = [];
+    aiPlayer = humanTeam === 1 ? 2 : 1;
+    log(mode === 'ai'
+      ? `게임 시작 · 컴퓨터(${aiDifficulty === 'easy' ? '쉬움' : '보통'}) 대전 · 나는 ${playerName(humanTeam)}`
+      : '게임 시작 · 2인 대전');
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').classList.add('show');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('undoBtn').disabled = true;
+    render();
+
+    if(mode === 'ai' && current === aiPlayer) setTimeout(aiMove, 500);
+  }
+
+  function restart(){
+    if(!gameOver && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
+    document.getElementById('game').classList.remove('show');
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('result').classList.remove('show');
+  }
+
+  function isHumanTurnClickable(){
+    if(gameOver) return false;
+    if(mode === 'ai' && current === aiPlayer) return false;
+    return true;
+  }
+
+  function selectSupply(size){
+    if(!isHumanTurnClickable()) return;
+    if(supply[current][size] <= 0) return;
+    if(selected && selected.source === 'supply' && selected.size === size){ selected = null; }
+    else selected = { source:'supply', size };
+    render();
+  }
+
+  function clickCell(idx){
+    if(!isHumanTurnClickable()) return;
+    const top = topOf(board[idx]);
+
+    if(selected){
+      if(selected.source === 'board' && selected.cellIndex === idx){ selected = null; render(); return; }
+      const destTop = topOf(board[idx]);
+      if(destTop && destTop.size >= selected.size){
+        flashCell = idx; render(); setTimeout(() => { flashCell = null; render(); }, 300);
+        return;
+      }
+      executeMove(idx);
+      return;
+    }
+
+    if(top && top.player === current){
+      selected = { source:'board', cellIndex: idx, size: top.size };
+      render();
+    }
+  }
+
+  function executeMove(destIndex){
+    pushUndo();
+    const size = selected.size;
+    const mover = current;
+    if(selected.source === 'supply'){
+      supply[current][size] -= 1;
+    } else {
+      board[selected.cellIndex].pop();
+    }
+    board[destIndex].push({ player: current, size });
+    selected = null;
+    lastMoveTo = destIndex;
+
+    const winInfo = findWinLine(board);
+    if(winInfo){
+      gameOver = true;
+      winnerPlayer = winInfo.player;
+      winLine = winInfo.line;
+      log(winInfo.player === mover ? `${playerName(winInfo.player)} 승리!` : `${playerName(mover)}의 이동으로 ${playerName(winInfo.player)}의 줄이 드러나 ${playerName(winInfo.player)} 승리!`);
+    } else {
+      winLine = null;
+      current = current === 1 ? 2 : 1;
+      log(`${playerName(mover)} 이동`);
+    }
+    render();
+
+    if(!gameOver && mode === 'ai' && current === aiPlayer){
+      setTimeout(aiMove, 500);
+    }
+  }
+
+  function getAllLegalMoves(player){
+    const moves = [];
+    for(const size of [1,2,3]){
+      if(supply[player][size] > 0){
+        for(let i=0;i<9;i++){
+          const top = topOf(board[i]);
+          if(!top || top.size < size) moves.push({ source:'supply', size, dest:i });
+        }
+      }
+    }
+    for(let i=0;i<9;i++){
+      const top = topOf(board[i]);
+      if(top && top.player === player){
+        for(let j=0;j<9;j++){
+          if(j === i) continue;
+          const destTop = topOf(board[j]);
+          if(!destTop || destTop.size < top.size) moves.push({ source:'board', cellIndex:i, size: top.size, dest:j });
+        }
+      }
+    }
+    return moves;
+  }
+
+  function simulateMove(move, player){
+    const b = board.map(cell => cell.slice());
+    if(move.source === 'supply'){
+      b[move.dest] = b[move.dest].concat([{ player, size: move.size }]);
+    } else {
+      b[move.cellIndex] = b[move.cellIndex].slice(0, -1);
+      b[move.dest] = b[move.dest].concat([{ player, size: move.size }]);
+    }
+    return b;
+  }
+
+  function aiMove(){
+    if(gameOver) return;
+    const player = aiPlayer;
+    const opponent = player === 1 ? 2 : 1;
+    const moves = getAllLegalMoves(player);
+    if(moves.length === 0){
+      log(`${playerName(player)}이(가) 둘 수 있는 곳이 없어 차례를 넘깁니다.`);
+      current = opponent;
+      render();
+      return;
+    }
+    let chosen = null;
+
+    if(aiDifficulty === 'normal'){
+      for(const m of moves){
+        if(checkWinnerOnBoard(simulateMove(m, player)) === player){ chosen = m; break; }
+      }
+      if(!chosen){
+        const oppMoves = getAllLegalMoves(opponent);
+        const threatDestinations = new Set();
+        for(const om of oppMoves){
+          if(checkWinnerOnBoard(simulateMove(om, opponent)) === opponent) threatDestinations.add(om.dest);
+        }
+        if(threatDestinations.size){
+          const blocking = moves.filter(m => threatDestinations.has(m.dest));
+          if(blocking.length){
+            blocking.sort((a,b) => b.size - a.size);
+            chosen = blocking[0];
+          }
+        }
+      }
+      if(!chosen){
+        const preferOrder = [4,0,2,6,8,1,3,5,7];
+        for(const idx of preferOrder){
+          const candidates = moves.filter(m => m.dest === idx);
+          if(candidates.length){
+            candidates.sort((a,b) => b.size - a.size);
+            chosen = candidates[0];
+            break;
+          }
+        }
+      }
+    }
+
+    if(!chosen) chosen = moves[Math.floor(Math.random() * moves.length)];
+
+    pushUndo();
+    if(chosen.source === 'supply') supply[player][chosen.size] -= 1;
+    else board[chosen.cellIndex].pop();
+    board[chosen.dest].push({ player, size: chosen.size });
+    lastMoveTo = chosen.dest;
+
+    const winInfo = findWinLine(board);
+    if(winInfo){
+      gameOver = true;
+      winnerPlayer = winInfo.player;
+      winLine = winInfo.line;
+      log(winInfo.player === player ? `${playerName(winInfo.player)}(컴퓨터) 승리!` : `컴퓨터의 이동으로 ${playerName(winInfo.player)}의 줄이 드러나 ${playerName(winInfo.player)} 승리!`);
+    } else {
+      winLine = null;
+      current = opponent;
+      log(`${playerName(player)}(컴퓨터) 이동`);
+    }
+    render();
+  }
+
+  function tokenHTML(piece, extraClasses){
+    return `<span class="token ${SIZE_CLASS[piece.size]} p${piece.player} ${extraClasses||''}"></span>`;
+  }
+
+  function render(){
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+    board.forEach((cell, i) => {
+      const top = topOf(cell);
+      const div = document.createElement('div');
+      div.className = 'cell';
+      if(selected){
+        const isSameSource = selected.source === 'board' && selected.cellIndex === i;
+        const canDrop = !isSameSource && (!top || top.size < selected.size);
+        if(isSameSource) div.classList.add('selected-source');
+        else if(canDrop) div.classList.add('valid-target');
+      }
+      if(flashCell === i) div.classList.add('invalid-flash');
+      if(winLine && winLine.includes(i)) div.classList.add('win-cell');
+      if(top) div.innerHTML = tokenHTML(top, i === lastMoveTo ? 'just-moved' : '');
+      div.addEventListener('click', () => clickCell(i));
+      boardEl.appendChild(div);
+    });
+
+    const traysEl = document.getElementById('trays');
+    traysEl.innerHTML = '';
+    [1,2].forEach(p => {
+      const tray = document.createElement('div');
+      tray.className = 'tray' + (current === p && !gameOver ? ' active' : '');
+      const groups = [3,2,1].map(size => {
+        const remain = supply[p][size];
+        let inner = '';
+        for(let k=0;k<2;k++){
+          const used = k >= remain;
+          const isPicked = selected && selected.source === 'supply' && selected.size === size && current === p && !used && k === remain - 1;
+          inner += `<span class="token ${SIZE_CLASS[size]} p${p} ${used ? 'used' : 'selectable'} ${isPicked ? 'picked' : ''}" data-size="${size}" data-player="${p}"></span>`;
+        }
+        return `<div class="piece-group">${inner}</div>`;
+      }).join('');
+      tray.innerHTML = `<div class="tray-name">${playerName(p)}</div><div class="pieces">${groups}</div>`;
+      tray.querySelectorAll('.token.selectable').forEach(el => {
+        el.addEventListener('click', () => {
+          const size = Number(el.dataset.size);
+          const owner = Number(el.dataset.player);
+          if(owner !== current) return;
+          selectSupply(size);
+        });
+      });
+      traysEl.appendChild(tray);
+    });
+
+    const dot = document.querySelector('#turnIndicator .turn-dot');
+    dot.className = 'turn-dot p' + current;
+    document.getElementById('turnIndicator').lastChild.textContent = ` ${playerName(current)} 차례`;
+
+    document.getElementById('log').innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
+    document.getElementById('undoBtn').disabled = history.length === 0;
+
+    if(gameOver){
+      document.getElementById('resultTitle').textContent = `${playerName(winnerPlayer)} 승리!`;
+      document.getElementById('resultDesc').textContent = '다시 하기를 누르면 새로 시작하고, 방금 수가 실수였다면 취소할 수 있어요.';
+      document.getElementById('result').classList.add('show');
+    } else {
+      document.getElementById('result').classList.remove('show');
+    }
+  }
+
+  document.getElementById('modeSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('aiOptions').classList.toggle('show', mode === 'ai');
+  });
+  document.getElementById('diffSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    aiDifficulty = btn.dataset.diff;
+    document.querySelectorAll('#diffSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('teamSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    humanTeam = Number(btn.dataset.team);
+    document.querySelectorAll('#teamSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('ruleToggleBtn').addEventListener('click', () => {
+    document.getElementById('ruleBox').classList.toggle('show');
+  });
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('playAgainBtn').addEventListener('click', restart);
+  document.getElementById('undoFromResultBtn').addEventListener('click', undo);
+  document.getElementById('logToggleBtn').addEventListener('click', () => {
+    const log = document.getElementById('log');
+    const nowShown = log.classList.toggle('show');
+    document.getElementById('logToggleBtn').textContent = nowShown ? '진행 기록 숨기기' : '진행 기록 보기';
+  });
+</script>
+</body>
+</html>
