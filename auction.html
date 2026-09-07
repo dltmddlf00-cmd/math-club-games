@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마이너스 경매 · 진행판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --bg-grid: #17222d;
+    --panel: #16212c;
+    --panel-2: #1c2a37;
+    --line: #2c4451;
+    --ink: #f3efe3;
+    --muted: #92abb5;
+    --gold: #f2b705;
+    --gold-deep: #c99400;
+    --danger: #e05353;
+    --ok: #4fc8c0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
+  body{
+    min-height:100vh;
+    background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%);
+  }
+  .wrap{ max-width:1180px; margin:0 auto; padding: 28px 20px 60px; }
+
+  h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,38px); color:var(--gold); margin:0 0 4px; letter-spacing:0.02em; }
+  .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ---------- setup screen ---------- */
+  #setup{ max-width:640px; margin: 40px auto; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:32px 30px; }
+  #setup label{ display:block; font-size:14px; color:var(--muted); margin:18px 0 8px; font-weight:700; }
+  #setup textarea, #setup input[type=number]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); font-family:'Noto Sans KR',sans-serif; font-size:15px; padding:12px 14px; resize:vertical;
+  }
+  #setup textarea{ min-height:130px; line-height:1.7; }
+  #setup .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+  .rule-toggle{
+    margin-top:22px; background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .rule-toggle:hover{ color:var(--ink); border-color:var(--gold); }
+  #ruleBox{
+    display:none; margin-top:14px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:13.5px; line-height:1.8; color:var(--muted);
+  }
+  #ruleBox.show{ display:block; }
+  #ruleBox b{ color:var(--ink); }
+  #ruleBox ol{ margin:8px 0 0; padding-left:20px; }
+
+  .start-btn{
+    margin-top:26px; width:100%; padding:16px; border:none; border-radius:12px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .start-btn:hover{ background:#ffcb2e; }
+
+  /* ---------- game screen ---------- */
+  #game{ display:none; }
+  #game.show{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
+  .pool-count{ font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:14px; }
+  .pool-count b{ color:var(--gold); }
+  .topbar-actions{ display:flex; gap:10px; }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:20px;
+    padding:34px 24px; text-align:center; margin-bottom:26px;
+    display:flex; align-items:center; justify-content:center; gap:40px; flex-wrap:wrap;
+  }
+  .stage-main{ flex:1; min-width:240px; }
+  .stage .label{ font-size:13px; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:10px; }
+  .pot-panel{ display:flex; flex-direction:column; align-items:center; gap:10px; min-width:90px; }
+  .pot-count-big{ font-family:'IBM Plex Mono',monospace; font-size:16px; color:var(--muted); }
+  .pot-count-big b{ color:var(--gold); font-size:20px; }
+
+  .coin-tower-wrap{ height:100px; display:flex; align-items:flex-end; }
+  .coin-tower{ position:relative; width:36px; height:16px; }
+  .coin-tower-ico{
+    position:absolute; left:0; width:36px; height:16px; border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, #fff2b8, var(--gold) 55%, var(--gold-deep) 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,.55), inset 0 -1px 1px rgba(0,0,0,.3);
+  }
+  .coin-tower-empty{
+    display:block; width:32px; height:14px; border-radius:50%;
+    border:1.5px dashed var(--line);
+  }
+  .coin-tower-overflow{
+    position:absolute; left:50%; transform:translateX(-50%); top:-20px;
+    font-size:11px; color:var(--muted); white-space:nowrap; font-family:'Noto Sans KR',sans-serif;
+  }
+  .cube-value{
+    font-family:'IBM Plex Mono',monospace; font-weight:700;
+    font-size: clamp(56px,10vw,100px); color:var(--gold);
+    line-height:1;
+  }
+  .cube-value.idle{ color:var(--muted); font-size: clamp(20px,3vw,26px); font-family:'Noto Sans KR',sans-serif; font-weight:700; }
+  .draw-btn{
+    margin-top:20px; padding:16px 44px; border:none; border-radius:999px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif;
+  }
+  .draw-btn:hover{ background:#ffcb2e; }
+  .draw-btn:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+  .stage-hint{ margin-top:14px; font-size:14px; color:var(--muted); }
+
+  .teams{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:16px;
+    margin-bottom:26px;
+  }
+  .team-card{
+    background:var(--panel); border:1px solid var(--line); border-left:5px solid var(--accent,var(--gold));
+    border-radius:14px; padding:18px 18px 16px;
+  }
+  .team-card h3{ margin:0 0 10px; font-size:17px; color:var(--ink); }
+  .coin-block{ display:flex; align-items:flex-end; gap:14px; margin-bottom:14px; }
+  .coin-block .coin-tower-wrap{ height:80px; }
+  .coin-count-big{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:30px; color:var(--gold); line-height:1; min-width:38px; }
+  .coin-count-label{ font-size:11px; color:var(--muted); display:block; margin-top:2px; font-family:'Noto Sans KR',sans-serif; font-weight:500; }
+  .cube-chips{ display:flex; flex-wrap:wrap; gap:6px; min-height:26px; margin-bottom:12px; }
+  .cube-chip{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:700;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--muted);
+    padding:3px 8px; border-radius:6px;
+  }
+  .cube-chip.counted{ border-color:var(--gold); color:var(--gold); }
+  .cube-chip.discounted{ opacity:0.45; text-decoration:line-through; }
+  .chip-group{
+    display:inline-flex; flex-wrap:wrap; gap:3px; padding:3px; border:1px dashed var(--line); border-radius:9px;
+    cursor:help; max-width:100%;
+  }
+  .score-row{ font-size:13px; color:var(--muted); margin-bottom:14px; }
+  .score-row b{ color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:16px; }
+  .team-actions{ display:flex; gap:8px; }
+  .btn-accept, .btn-pass{
+    flex:1; padding:10px 6px; border-radius:9px; border:none; cursor:pointer;
+    font-weight:800; font-size:14px; font-family:'Noto Sans KR',sans-serif;
+  }
+  .btn-accept{ background:var(--gold); color:#231a00; }
+  .btn-accept:hover{ background:#ffcb2e; }
+  .btn-pass{ background:var(--panel-2); color:var(--ink); border:1px solid var(--line); }
+  .btn-pass:hover{ border-color:var(--danger); color:var(--danger); }
+  .btn-accept:disabled, .btn-pass:disabled{ opacity:0.35; cursor:not-allowed; }
+  .no-coin-note{ font-size:11.5px; color:var(--danger); margin-top:6px; text-align:center; }
+
+  .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
+
+  #log{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; max-height:160px; overflow-y:auto; font-size:13.5px; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.9;
+  }
+  #log div:first-child{ color:var(--ink); }
+
+  #result{
+    display:none; margin-top:26px; background:var(--panel); border:2px solid var(--gold);
+    border-radius:18px; padding:26px 24px; text-align:center;
+  }
+  #result.show{ display:block; }
+  #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:28px; margin:0 0 18px; }
+  .rank-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 16px; border-radius:10px; background:var(--panel-2); margin-bottom:8px;
+    font-size:15px;
+  }
+  .rank-row .place{ font-weight:900; color:var(--gold); width:44px; text-align:left; }
+  .rank-row .name{ flex:1; text-align:left; font-weight:700; }
+  .rank-row .score{ font-family:'IBM Plex Mono',monospace; font-weight:700; }
+  #hiddenCubeReveal{ margin-top:16px; font-size:14px; color:var(--muted); }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Math Club Games</div>
+  <h1>마이너스 경매 · 진행판</h1>
+
+  <div id="setup">
+    <div class="hint" style="margin-top:0;">모둠 이름을 한 줄에 하나씩 입력하세요. 게임 시작 시 각 모둠에 금화가 지급되고, -3부터 -35까지 33개의 큐브 중 1개가 몰래 제외된 채 경매가 시작됩니다.</div>
+    <label for="teamNames">모둠 이름 (한 줄에 하나씩)</label>
+    <textarea id="teamNames">1모둠
+2모둠
+3모둠
+4모둠</textarea>
+
+    <label for="startCoins">모둠당 시작 금화 수</label>
+    <input type="number" id="startCoins" value="9" min="1" max="30">
+
+    <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
+    <div id="ruleBox">
+      <b>마이너스 경매 규칙</b>
+      <ol>
+        <li>각 모둠은 시작 금화를 받습니다.</li>
+        <li>-3~-35 큐브 33개 중 1개를 몰래 제외하고, 나머지 32개를 하나씩 무작위로 공개해 경매를 진행합니다.</li>
+        <li>모둠은 공개된 큐브를 <b>낙찰</b>(가져가기)하거나, <b>패스</b>(금화 1개 지불하고 다음으로 넘기기) 중 하나를 선택합니다.</li>
+        <li>금화가 없는 모둠은 반드시 낙찰해야 합니다.</li>
+        <li>모든 큐브가 소진되면, 각 모둠은 (낙찰받은 큐브 숫자의 합) + (남은 금화 수)로 최종 점수를 계산합니다.</li>
+        <li>단, 낙찰받은 큐브 숫자가 연속되면(예 -10,-11,-12) 그중 0에 가장 가까운 값 하나만 점수에 반영됩니다.</li>
+        <li>최종 점수가 가장 큰(0에 가장 가까운) 모둠이 우승합니다.</li>
+      </ol>
+    </div>
+
+    <button class="start-btn" id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <div class="pool-count">남은 큐브 <b id="poolCount">0</b>장</div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="undoBtn" disabled>실행 취소</button>
+        <button class="ghost-btn" id="restartBtn">새 게임</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-main">
+        <div class="label">이번 큐브</div>
+        <div class="cube-value idle" id="cubeValue">큐브를 뽑아주세요</div>
+        <button class="draw-btn" id="drawBtn">큐브 뽑기</button>
+        <div class="stage-hint" id="stageHint">버튼을 눌러 첫 큐브를 공개하세요.</div>
+      </div>
+      <div class="pot-panel">
+        <div class="label">판에 쌓인 금화</div>
+        <div class="coin-tower-wrap"><div class="coin-tower" id="potTower"></div></div>
+        <div class="pot-count-big"><b id="potCount">0</b>개</div>
+      </div>
+    </div>
+
+    <div class="panel-title">모둠 현황</div>
+    <div class="teams" id="teams"></div>
+
+    <div class="panel-title">진행 기록</div>
+    <div id="log"></div>
+
+    <div id="result">
+      <h2>🏆 최종 결과</h2>
+      <div id="rankList"></div>
+      <div id="hiddenCubeReveal"></div>
+    </div>
+  </div>
+
+  <footer>수학 동아리 · 정수 비교를 몸으로 익히는 경매 게임</footer>
+</div>
+
+<script>
+  const ACCENTS = ['#2f6fed','#e0505a','#4fc8c0','#f2b705','#a06cd5','#5bc16a','#e8853d','#5aa9e6'];
+
+  let pool = [];
+  let teams = [];
+  let currentCube = null;
+  let hiddenCube = null;
+  let pot = 0;
+  let logEntries = [];
+  let undoStack = [];
+
+  function buildPool(){
+    const arr = [];
+    for(let n = -3; n >= -35; n--) arr.push(n);
+    return arr;
+  }
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function renderCoinTower(count, cap){
+    if(count === 0) return '<span class="coin-tower-empty"></span>';
+    const shown = Math.min(count, cap);
+    let html = '';
+    for(let i=0;i<shown;i++){
+      html += `<span class="coin-tower-ico" style="bottom:${i*7}px; z-index:${i};"></span>`;
+    }
+    if(count > cap) html += `<span class="coin-tower-overflow">+${count - cap}</span>`;
+    return html;
+  }
+
+  function renderCubeChips(cubes){
+    if(cubes.length === 0) return '<span class="cube-chip">낙찰 없음</span>';
+    const sorted = [...cubes].sort((a,b)=>a-b);
+    let groups = [];
+    let cur = [sorted[0]];
+    for(let i=1;i<sorted.length;i++){
+      if(sorted[i] === cur[cur.length-1] + 1){ cur.push(sorted[i]); }
+      else { groups.push(cur); cur = [sorted[i]]; }
+    }
+    groups.push(cur);
+    return groups.map(g => {
+      const maxV = Math.max(...g);
+      if(g.length === 1) return `<span class="cube-chip counted">${g[0]}</span>`;
+      const inner = g.map(v => `<span class="cube-chip ${v===maxV?'counted':'discounted'}">${v}</span>`).join('');
+      return `<span class="chip-group" title="연속 구간 ${g.join(', ')} 중 ${maxV}만 점수로 인정">${inner}</span>`;
+    }).join('');
+  }
+
+  function computeCubeScore(values){
+    if(values.length === 0) return 0;
+    const sorted = [...values].sort((a,b)=>a-b);
+    let groups = [];
+    let cur = [sorted[0]];
+    for(let i=1;i<sorted.length;i++){
+      if(sorted[i] === cur[cur.length-1] + 1){ cur.push(sorted[i]); }
+      else { groups.push(cur); cur = [sorted[i]]; }
+    }
+    groups.push(cur);
+    return groups.reduce((acc,g)=> acc + Math.max(...g), 0);
+  }
+
+  function snapshot(){
+    return JSON.stringify({
+      pool, teams, currentCube, pot, logEntries
+    });
+  }
+  function pushUndo(){
+    undoStack.push(snapshot());
+    document.getElementById('undoBtn').disabled = false;
+  }
+  function undo(){
+    if(undoStack.length === 0) return;
+    const s = JSON.parse(undoStack.pop());
+    pool = s.pool; teams = s.teams; currentCube = s.currentCube; pot = s.pot; logEntries = s.logEntries;
+    document.getElementById('undoBtn').disabled = undoStack.length === 0;
+    render();
+  }
+
+  function log(msg){
+    logEntries.unshift(msg);
+  }
+
+  function startGame(){
+    const names = document.getElementById('teamNames').value
+      .split('\n').map(s=>s.trim()).filter(Boolean);
+    if(names.length < 2){
+      alert('모둠 이름을 2개 이상 입력해주세요.');
+      return;
+    }
+    const startCoins = Math.max(1, parseInt(document.getElementById('startCoins').value, 10) || 9);
+    pool = shuffle(buildPool());
+    hiddenCube = pool.pop(); // 히든 큐브 1개 몰래 제외 (최종 결과에서 공개)
+    teams = names.map((name, i) => ({
+      name, coins: startCoins, cubes: [], accent: ACCENTS[i % ACCENTS.length]
+    }));
+    currentCube = null;
+    pot = 0;
+    logEntries = [];
+    undoStack = [];
+    log(`게임 시작 · 모둠 ${names.length}개 · 시작 금화 ${startCoins}개 · 경매 큐브 ${pool.length}장`);
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').classList.add('show');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('undoBtn').disabled = true;
+    render();
+  }
+
+  function drawCube(){
+    if(currentCube !== null || pool.length === 0) return;
+    pushUndo();
+    currentCube = pool.pop();
+    pot = 0;
+    log(`새 큐브 공개: ${currentCube}`);
+    render();
+  }
+
+  function accept(teamIdx){
+    if(currentCube === null) return;
+    pushUndo();
+    const t = teams[teamIdx];
+    t.cubes.push(currentCube);
+    const potTaken = pot;
+    t.coins += pot;
+    pot = 0;
+    log(potTaken > 0
+      ? `${t.name} 낙찰 → ${currentCube} + 판돈 금화 ${potTaken}개 획득 (금화 ${t.coins}개)`
+      : `${t.name} 낙찰 → ${currentCube}`);
+    currentCube = null;
+    render();
+  }
+
+  function pass(teamIdx){
+    if(currentCube === null) return;
+    const t = teams[teamIdx];
+    if(t.coins <= 0) return;
+    pushUndo();
+    t.coins -= 1;
+    pot += 1;
+    log(`${t.name} 패스 (금화 -1, 판에 쌓인 금화 ${pot}개)`);
+    render();
+  }
+
+  function restart(){
+    if(!confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
+    document.getElementById('game').classList.remove('show');
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('result').classList.remove('show');
+  }
+
+  function render(){
+    document.getElementById('poolCount').textContent = pool.length;
+
+    const cubeEl = document.getElementById('cubeValue');
+    const drawBtn = document.getElementById('drawBtn');
+    const hint = document.getElementById('stageHint');
+
+    if(currentCube === null){
+      cubeEl.textContent = pool.length === 0 ? '큐브 소진!' : '큐브를 뽑아주세요';
+      cubeEl.classList.add('idle');
+      drawBtn.disabled = pool.length === 0;
+      hint.textContent = pool.length === 0
+        ? '모든 큐브가 소진되었습니다. 아래에서 최종 결과를 확인하세요.'
+        : '버튼을 눌러 다음 큐브를 공개하세요.';
+    } else {
+      cubeEl.textContent = currentCube;
+      cubeEl.classList.remove('idle');
+      drawBtn.disabled = true;
+      hint.textContent = '어느 모둠이 낙찰할까요? 각 모둠 카드에서 낙찰 또는 패스를 눌러주세요.';
+    }
+
+    document.getElementById('potTower').innerHTML = renderCoinTower(pot, 10);
+    document.getElementById('potCount').textContent = pot;
+
+    const teamsBox = document.getElementById('teams');
+    teamsBox.innerHTML = '';
+    teams.forEach((t, i) => {
+      const score = computeCubeScore(t.cubes) + t.coins;
+      const card = document.createElement('div');
+      card.className = 'team-card';
+      card.style.setProperty('--accent', t.accent);
+      card.innerHTML = `
+        <h3>${t.name}</h3>
+        <div class="coin-block">
+          <div class="coin-tower-wrap"><div class="coin-tower">${renderCoinTower(t.coins, 12)}</div></div>
+          <div>
+            <div class="coin-count-big">${t.coins}</div>
+            <span class="coin-count-label">금화</span>
+          </div>
+        </div>
+        <div class="cube-chips">${renderCubeChips(t.cubes)}</div>
+        <div class="score-row">현재 점수 <b>${score}</b></div>
+        <div class="team-actions">
+          <button class="btn-accept" ${currentCube===null?'disabled':''}>낙찰</button>
+          <button class="btn-pass" ${(currentCube===null || t.coins<=0)?'disabled':''}>패스</button>
+        </div>
+        ${ (currentCube!==null && t.coins<=0) ? '<div class="no-coin-note">금화가 없어 낙찰만 가능</div>' : '' }
+      `;
+      card.querySelector('.btn-accept').addEventListener('click', () => accept(i));
+      card.querySelector('.btn-pass').addEventListener('click', () => pass(i));
+      teamsBox.appendChild(card);
+    });
+
+    const logBox = document.getElementById('log');
+    logBox.innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
+
+    document.getElementById('undoBtn').disabled = undoStack.length === 0;
+
+    if(pool.length === 0 && currentCube === null){
+      showResult();
+    } else {
+      document.getElementById('result').classList.remove('show');
+    }
+  }
+
+  function showResult(){
+    const ranked = teams.map(t => ({
+      name: t.name,
+      score: computeCubeScore(t.cubes) + t.coins
+    })).sort((a,b) => b.score - a.score);
+
+    const box = document.getElementById('rankList');
+    box.innerHTML = ranked.map((r, i) => {
+      let place = `${i+1}위`;
+      if(i > 0 && r.score === ranked[i-1].score) place = '공동 ' + place;
+      return `<div class="rank-row"><span class="place">${place}</span><span class="name">${r.name}</span><span class="score">${r.score}점</span></div>`;
+    }).join('');
+    document.getElementById('hiddenCubeReveal').textContent = `🙈 공개되지 않았던 히든 큐브는 ${hiddenCube} 이었습니다.`;
+    document.getElementById('result').classList.add('show');
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('drawBtn').addEventListener('click', drawCube);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('ruleToggleBtn').addEventListener('click', () => {
+    document.getElementById('ruleBox').classList.toggle('show');
+  });
+</script>
+</body>
+</html>
