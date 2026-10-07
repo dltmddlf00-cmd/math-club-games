@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사목 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --panel: #16212c;
+    --panel-2: #1c2a37;
+    --frame: #1b3a66;
+    --frame-lo: #0e2240;
+    --line: #2c4451;
+    --ink: #f3efe3;
+    --muted: #92abb5;
+    --gold: #f2b705;
+    --ok: #4fc8c0;
+    --danger: #e05353;
+    --p1: #2f6fed; --p1-hi:#a9c6ff; --p1-lo:#1b4fc4;
+    --p2: #e0505a; --p2-hi:#ffb3b8; --p2-lo:#b93540;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
+  body{ background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%); }
+  .wrap{ max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+
+  h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,36px); color:var(--gold); margin:0 0 4px; }
+  .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ---------- setup ---------- */
+  #setup{ max-width:520px; margin:36px auto 0; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 28px; }
+  #setup .hint{ font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+  .seg-label{ font-size:13px; color:var(--muted); font-weight:700; margin:16px 0 8px; }
+  .seg{ display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button{
+    flex:1; min-width:110px; padding:12px 10px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel-2); color:var(--muted); font-family:'Noto Sans KR',sans-serif; font-weight:700;
+    font-size:14px; cursor:pointer;
+  }
+  .seg button.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,183,5,0.08); }
+  #aiOptions{ display:none; }
+  #aiOptions.show{ display:block; }
+  .start-btn{
+    margin-top:26px; width:100%; padding:16px; border:none; border-radius:12px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+  }
+  .start-btn:hover{ background:#ffcb2e; }
+  .rule-toggle{
+    margin-top:18px; background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .rule-toggle:hover{ color:var(--ink); border-color:var(--gold); }
+  #ruleBox{
+    display:none; margin-top:14px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:13.5px; line-height:1.8; color:var(--muted);
+  }
+  #ruleBox.show{ display:block; }
+  #ruleBox b{ color:var(--ink); }
+  #ruleBox ul{ margin:8px 0 0; padding-left:20px; }
+
+  /* ---------- game ---------- */
+  #game{ display:none; }
+  #game.show{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+  .turn-indicator{ display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
+  .turn-dot{ width:16px; height:16px; border-radius:50%; }
+  .turn-dot.p1{ background:linear-gradient(135deg,var(--p1-hi),var(--p1)); }
+  .turn-dot.p2{ background:linear-gradient(135deg,var(--p2-hi),var(--p2)); }
+  .topbar-actions{ display:flex; gap:10px; }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .board-frame-wrap{ display:flex; justify-content:center; margin-bottom:10px; }
+  .board-frame{
+    background:linear-gradient(180deg, var(--frame), var(--frame-lo));
+    border-radius:16px; padding:10px; box-shadow:0 14px 34px rgba(0,0,0,.5);
+    width:min(378px, 92vw);
+  }
+  .col-arrows{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px; }
+  .col-arrow{
+    background:rgba(242,183,5,0.1); border:1.5px solid transparent; border-radius:8px;
+    color:var(--gold); font-size:16px; padding:6px 0; cursor:pointer; text-align:center;
+  }
+  .col-arrow:hover:not(:disabled){ background:rgba(242,183,5,0.25); border-color:var(--gold); }
+  .col-arrow:disabled{ opacity:0.2; cursor:not-allowed; }
+
+  .board{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cell{
+    aspect-ratio:1; border-radius:50%; background:var(--bg); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; position:relative;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,.6);
+  }
+  .cell.valid-col{ box-shadow: inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 2px rgba(242,183,5,0.35); }
+
+  /* 바둑돌 같은 양각 렌즈형 돌 느낌: 비네트 음영 + 날카로운 스펙큘러 + 테두리 베젤 */
+  .disc{
+    position:relative; width:84%; height:84%; border-radius:50%;
+    box-shadow:
+      inset 0 -10px 16px rgba(0,0,0,.5),
+      inset 0 4px 5px rgba(255,255,255,.18),
+      0 4px 8px rgba(0,0,0,.6),
+      0 0 0 2px rgba(0,0,0,.28);
+  }
+  .disc::before{
+    /* 날카로운 유광 하이라이트 */
+    content:'';
+    position:absolute; top:11%; left:20%;
+    width:26%; height:16%;
+    background:rgba(255,255,255,.75);
+    border-radius:50%;
+    filter: blur(1px);
+    transform: rotate(-20deg);
+  }
+  .disc::after{
+    /* 테두리 베젤 링 - 돌을 깎아낸 듯한 단면 느낌 */
+    content:'';
+    position:absolute; inset:0;
+    border-radius:50%;
+    box-shadow:
+      inset 0 0 0 2px rgba(0,0,0,.2),
+      inset 0 0 6px 2px rgba(0,0,0,.25);
+  }
+  .disc.p1{ background:radial-gradient(circle at 38% 32%, var(--p1-hi), var(--p1) 45%, var(--p1-lo) 100%); }
+  .disc.p2{ background:radial-gradient(circle at 38% 32%, var(--p2-hi), var(--p2) 45%, var(--p2-lo) 100%); }
+  .disc.drop-anim{ animation: dropfall .28s cubic-bezier(.4,0,.6,1); }
+  @keyframes dropfall{ from{ transform:translateY(-240px); opacity:.7; } to{ transform:translateY(0); opacity:1; } }
+  .disc.just-moved{ outline:3px solid var(--ok); outline-offset:2px; }
+  .cell.win-cell{ box-shadow: inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 4px var(--gold); animation: win-pulse 1s ease-in-out infinite; }
+  @keyframes win-pulse{ 0%,100%{ box-shadow: inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 4px rgba(242,183,5,.9); } 50%{ box-shadow: inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 4px rgba(242,183,5,.25); } }
+
+  .trays{ display:flex; justify-content:center; gap:28px; margin:18px 0 22px; flex-wrap:wrap; }
+  .legend{ display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; border:1.5px solid var(--line); font-size:14px; font-weight:700; color:var(--muted); }
+  .legend.active{ border-color:var(--gold); color:var(--ink); }
+  .legend .dot{ width:16px; height:16px; border-radius:50%; }
+  .legend .dot.p1{ background:linear-gradient(135deg,var(--p1-hi),var(--p1)); }
+  .legend .dot.p2{ background:linear-gradient(135deg,var(--p2-hi),var(--p2)); }
+
+  .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
+  #log{
+    display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; max-height:150px; overflow-y:auto; font-size:13.5px; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.9; margin-top:10px;
+  }
+  #log.show{ display:block; }
+  #log div:first-child{ color:var(--ink); }
+
+  #result{
+    display:none; position:fixed; inset:0; z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+    background:rgba(6,10,15,0.72); backdrop-filter:blur(2px);
+  }
+  #result.show{ display:flex; }
+  .modal-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:20px;
+    padding:38px 32px 30px; text-align:center; max-width:360px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+    animation: pop-in .22s ease;
+  }
+  @keyframes pop-in{ from{ transform:scale(.86); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .result-emoji{ font-size:52px; line-height:1; margin-bottom:6px; }
+  #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:30px; margin:0 0 10px; }
+  #result p{ color:var(--muted); margin:0 0 22px; font-size:14px; }
+  #undoFromResultBtn{ margin-top:14px; width:100%; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Math Club Games</div>
+  <h1>사목 게임</h1>
+
+  <div id="setup">
+    <div class="hint">가로 7칸 x 세로 6칸 판에 번갈아 말을 떨어뜨려서, 가로·세로·대각선 중 먼저 4개를 연결하면 승리하는 게임이에요.</div>
+
+    <div class="seg-label">대전 방식</div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="2p" class="active">2인 대전</button>
+      <button data-mode="ai">컴퓨터와 대전</button>
+    </div>
+
+    <div id="aiOptions">
+      <div class="seg-label">난이도</div>
+      <div class="seg" id="diffSeg">
+        <button data-diff="easy" class="active">쉬움</button>
+        <button data-diff="normal">보통</button>
+      </div>
+      <div class="seg-label">내 팀</div>
+      <div class="seg" id="teamSeg">
+        <button data-team="1" class="active">파랑 (선공)</button>
+        <button data-team="2">빨강 (후공)</button>
+      </div>
+    </div>
+
+    <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
+    <div id="ruleBox">
+      <b>사목 게임 규칙</b>
+      <ul>
+        <li>가로 7칸, 세로 6칸 판을 사용합니다.</li>
+        <li>자기 차례에 원하는 열(세로줄)을 고르면, 그 열의 가장 아래 빈 칸에 말이 떨어집니다.</li>
+        <li>가로, 세로, 대각선 중 어느 방향이든 먼저 4개를 연결하면 승리합니다.</li>
+        <li>판이 모두 채워질 때까지 아무도 4개를 연결하지 못하면 무승부입니다.</li>
+      </ul>
+    </div>
+
+    <button class="start-btn" id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <div class="turn-indicator" id="turnIndicator"><span class="turn-dot p1"></span> 파랑 차례</div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="undoBtn" disabled>실행 취소</button>
+        <button class="ghost-btn" id="restartBtn">새 게임</button>
+      </div>
+    </div>
+
+    <div class="board-frame-wrap">
+      <div class="board-frame">
+        <div class="col-arrows" id="colArrows"></div>
+        <div class="board" id="board"></div>
+      </div>
+    </div>
+
+    <div class="trays" id="trays">
+      <div class="legend p1"><span class="dot p1"></span>파랑</div>
+      <div class="legend p2"><span class="dot p2"></span>빨강</div>
+    </div>
+
+    <button class="rule-toggle" id="logToggleBtn">진행 기록 보기</button>
+    <div id="log"></div>
+  </div>
+
+  <div id="result">
+    <div class="modal-card">
+      <div class="result-emoji" id="resultEmoji">🏆</div>
+      <h2 id="resultTitle">파랑 승리!</h2>
+      <p id="resultDesc"></p>
+      <button class="start-btn" id="playAgainBtn">다시 하기</button>
+      <button class="ghost-btn" id="undoFromResultBtn">방금 수 취소하기</button>
+    </div>
+  </div>
+
+  <footer>수학 동아리 · 네 개를 먼저 잇는 전략 게임</footer>
+</div>
+
+<script>
+  const ROWS = 6, COLS = 7;
+  const CENTER_ORDER = [3,2,4,1,5,0,6];
+
+  let mode = '2p';
+  let aiDifficulty = 'easy';
+  let humanTeam = 1;
+  let aiPlayer = 2;
+
+  let grid = [];
+  let current = 1;
+  let gameOver = false;
+  let winnerPlayer = null; // null + gameOver=true + isDraw=true => draw
+  let isDraw = false;
+  let winCells = null;
+  let lastMove = null; // {row, col}
+  let logEntries = [];
+  let history = [];
+
+  function playerName(p){ return p === 1 ? '파랑' : '빨강'; }
+
+  function newGrid(){ return Array.from({length:ROWS}, () => Array(COLS).fill(null)); }
+
+  function lowestEmptyRow(g, col){
+    for(let r = ROWS - 1; r >= 0; r--){
+      if(!g[r][col]) return r;
+    }
+    return -1;
+  }
+
+  function findWinLine(g){
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const p = g[r][c];
+        if(!p) continue;
+        for(const [dr,dc] of dirs){
+          const cells = [[r,c]];
+          let rr = r, cc = c, ok = true;
+          for(let k=1;k<4;k++){
+            rr += dr; cc += dc;
+            if(rr<0||rr>=ROWS||cc<0||cc>=COLS||g[rr][cc] !== p){ ok = false; break; }
+            cells.push([rr,cc]);
+          }
+          if(ok) return { player: p, cells };
+        }
+      }
+    }
+    return null;
+  }
+
+  function isFull(g){ return g[0].every(cell => cell !== null); }
+
+  function log(msg){ logEntries.unshift(msg); }
+
+  function snapshot(){
+    return JSON.stringify({ grid, current, gameOver, winnerPlayer, isDraw, winCells, lastMove, logEntries });
+  }
+  function pushUndo(){
+    history.push(snapshot());
+    document.getElementById('undoBtn').disabled = false;
+  }
+  function restore(s){
+    const st = JSON.parse(s);
+    grid = st.grid; current = st.current; gameOver = st.gameOver; winnerPlayer = st.winnerPlayer;
+    isDraw = st.isDraw; winCells = st.winCells; lastMove = st.lastMove; logEntries = st.logEntries;
+  }
+  function undo(){
+    if(history.length === 0) return;
+    restore(history.pop());
+    if(mode === 'ai' && !gameOver && current === aiPlayer && history.length > 0){
+      restore(history.pop());
+    }
+    document.getElementById('undoBtn').disabled = history.length === 0;
+    render();
+  }
+
+  function startGame(){
+    grid = newGrid();
+    current = 1;
+    gameOver = false;
+    winnerPlayer = null;
+    isDraw = false;
+    winCells = null;
+    lastMove = null;
+    logEntries = [];
+    history = [];
+    aiPlayer = humanTeam === 1 ? 2 : 1;
+    log(mode === 'ai'
+      ? `게임 시작 · 컴퓨터(${aiDifficulty === 'easy' ? '쉬움' : '보통'}) 대전 · 나는 ${playerName(humanTeam)}`
+      : '게임 시작 · 2인 대전');
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').classList.add('show');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('undoBtn').disabled = true;
+    render();
+
+    if(mode === 'ai' && current === aiPlayer) setTimeout(aiMove, 500);
+  }
+
+  function restart(){
+    if(!gameOver && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
+    document.getElementById('game').classList.remove('show');
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('result').classList.remove('show');
+  }
+
+  function isHumanTurnClickable(){
+    if(gameOver) return false;
+    if(mode === 'ai' && current === aiPlayer) return false;
+    return true;
+  }
+
+  function dropInColumn(col){
+    if(!isHumanTurnClickable()) return;
+    playMove(col, current);
+  }
+
+  function playMove(col, mover){
+    const row = lowestEmptyRow(grid, col);
+    if(row === -1) return false;
+    pushUndo();
+    grid[row][col] = mover;
+    lastMove = { row, col };
+
+    const winInfo = findWinLine(grid);
+    if(winInfo){
+      gameOver = true;
+      winnerPlayer = winInfo.player;
+      winCells = winInfo.cells;
+      log(`${playerName(winInfo.player)} 승리!`);
+    } else if(isFull(grid)){
+      gameOver = true;
+      isDraw = true;
+      log('무승부!');
+    } else {
+      current = current === 1 ? 2 : 1;
+      log(`${playerName(mover)}${mode === 'ai' && mover === aiPlayer ? '(컴퓨터)' : ''} ${col+1}번 열에 놓음`);
+    }
+    render();
+
+    if(!gameOver && mode === 'ai' && current === aiPlayer){
+      setTimeout(aiMove, 500);
+    }
+    return true;
+  }
+
+  function validColumns(g){
+    const cols = [];
+    for(let c=0;c<COLS;c++) if(g[c] !== undefined && lowestEmptyRow(g,c) !== -1) cols.push(c);
+    return cols;
+  }
+
+  function simulateDrop(g, col, player){
+    const copy = g.map(row => row.slice());
+    const row = lowestEmptyRow(copy, col);
+    if(row === -1) return null;
+    copy[row][col] = player;
+    return copy;
+  }
+
+  function aiMove(){
+    if(gameOver) return;
+    const player = aiPlayer;
+    const opponent = player === 1 ? 2 : 1;
+    const cols = validColumns(grid);
+    if(cols.length === 0) return;
+
+    let chosen = null;
+
+    if(aiDifficulty === 'normal'){
+      for(const c of cols){
+        const g2 = simulateDrop(grid, c, player);
+        if(g2 && findWinLine(g2)?.player === player){ chosen = c; break; }
+      }
+      if(chosen === null){
+        const blockers = cols.filter(c => {
+          const g2 = simulateDrop(grid, c, opponent);
+          return g2 && findWinLine(g2)?.player === opponent;
+        });
+        if(blockers.length){
+          chosen = CENTER_ORDER.find(c => blockers.includes(c)) ?? blockers[0];
+        }
+      }
+      if(chosen === null){
+        const safeCols = cols.filter(c => {
+          const g2 = simulateDrop(grid, c, player);
+          if(!g2) return false;
+          const oppCols = validColumns(g2);
+          return !oppCols.some(oc => {
+            const g3 = simulateDrop(g2, oc, opponent);
+            return g3 && findWinLine(g3)?.player === opponent;
+          });
+        });
+        const pool = safeCols.length ? safeCols : cols;
+        chosen = CENTER_ORDER.find(c => pool.includes(c)) ?? pool[0];
+      }
+    }
+
+    if(chosen === null) chosen = cols[Math.floor(Math.random() * cols.length)];
+    playMove(chosen, player);
+  }
+
+  function render(){
+    const colArrowsEl = document.getElementById('colArrows');
+    colArrowsEl.innerHTML = '';
+    for(let c=0;c<COLS;c++){
+      const btn = document.createElement('button');
+      btn.className = 'col-arrow';
+      btn.textContent = '▼';
+      btn.disabled = !isHumanTurnClickable() || lowestEmptyRow(grid, c) === -1;
+      btn.addEventListener('click', () => dropInColumn(c));
+      colArrowsEl.appendChild(btn);
+    }
+
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'cell';
+        const canDrop = isHumanTurnClickable() && lowestEmptyRow(grid, c) !== -1;
+        if(canDrop) cellDiv.classList.add('valid-col');
+        if(winCells && winCells.some(([wr,wc]) => wr === r && wc === c)) cellDiv.classList.add('win-cell');
+        const val = grid[r][c];
+        if(val){
+          const disc = document.createElement('div');
+          let cls = `disc p${val}`;
+          if(lastMove && lastMove.row === r && lastMove.col === c) cls += ' just-moved drop-anim';
+          disc.className = cls;
+          cellDiv.appendChild(disc);
+        }
+        cellDiv.addEventListener('click', () => dropInColumn(c));
+        boardEl.appendChild(cellDiv);
+      }
+    }
+
+    document.querySelectorAll('.legend').forEach(el => el.classList.remove('active'));
+    if(!gameOver){
+      document.querySelector(`.legend.p${current}`).classList.add('active');
+    }
+
+    const dot = document.querySelector('#turnIndicator .turn-dot');
+    dot.className = 'turn-dot p' + current;
+    document.getElementById('turnIndicator').lastChild.textContent = ` ${playerName(current)} 차례`;
+
+    document.getElementById('log').innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
+    document.getElementById('undoBtn').disabled = history.length === 0;
+
+    if(gameOver){
+      if(isDraw){
+        document.getElementById('resultEmoji').textContent = '🤝';
+        document.getElementById('resultTitle').textContent = '무승부!';
+        document.getElementById('resultDesc').textContent = '판이 가득 찼어요. 다시 하기로 새로 도전해보세요.';
+      } else {
+        document.getElementById('resultEmoji').textContent = '🏆';
+        document.getElementById('resultTitle').textContent = `${playerName(winnerPlayer)} 승리!`;
+        document.getElementById('resultDesc').textContent = '다시 하기를 누르면 새로 시작하고, 방금 수가 실수였다면 취소할 수 있어요.';
+      }
+      document.getElementById('result').classList.add('show');
+    } else {
+      document.getElementById('result').classList.remove('show');
+    }
+  }
+
+  document.getElementById('modeSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('aiOptions').classList.toggle('show', mode === 'ai');
+  });
+  document.getElementById('diffSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    aiDifficulty = btn.dataset.diff;
+    document.querySelectorAll('#diffSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('teamSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    humanTeam = Number(btn.dataset.team);
+    document.querySelectorAll('#teamSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('ruleToggleBtn').addEventListener('click', () => {
+    document.getElementById('ruleBox').classList.toggle('show');
+  });
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('playAgainBtn').addEventListener('click', restart);
+  document.getElementById('undoFromResultBtn').addEventListener('click', undo);
+  document.getElementById('logToggleBtn').addEventListener('click', () => {
+    const logEl = document.getElementById('log');
+    const nowShown = logEl.classList.toggle('show');
+    document.getElementById('logToggleBtn').textContent = nowShown ? '진행 기록 숨기기' : '진행 기록 보기';
+  });
+</script>
+</body>
+</html>
