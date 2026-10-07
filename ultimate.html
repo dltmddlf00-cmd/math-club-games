@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>궁극의 틱택토</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --panel: #16212c;
+    --panel-2: #1c2a37;
+    --cell-bg: #0f1720;
+    --line: #2c4451;
+    --ink: #f3efe3;
+    --muted: #92abb5;
+    --gold: #f2b705;
+    --ok: #4fc8c0;
+    --danger: #e05353;
+    --p1: #2f6fed; --p1-hi:#a9c6ff; --p1-lo:#1b4fc4;
+    --p2: #e0505a; --p2-hi:#ffb3b8; --p2-lo:#b93540;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
+  body{ background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%); }
+  .wrap{ max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+
+  h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,36px); color:var(--gold); margin:0 0 4px; }
+  .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ---------- setup ---------- */
+  #setup{ max-width:520px; margin:36px auto 0; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 28px; }
+  #setup .hint{ font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+  .seg-label{ font-size:13px; color:var(--muted); font-weight:700; margin:16px 0 8px; }
+  .seg{ display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button{
+    flex:1; min-width:110px; padding:12px 10px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel-2); color:var(--muted); font-family:'Noto Sans KR',sans-serif; font-weight:700;
+    font-size:14px; cursor:pointer;
+  }
+  .seg button.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,183,5,0.08); }
+  #aiOptions{ display:none; }
+  #aiOptions.show{ display:block; }
+  .start-btn{
+    margin-top:26px; width:100%; padding:16px; border:none; border-radius:12px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+  }
+  .start-btn:hover{ background:#ffcb2e; }
+  .rule-toggle{
+    margin-top:18px; background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .rule-toggle:hover{ color:var(--ink); border-color:var(--gold); }
+  #ruleBox{
+    display:none; margin-top:14px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:13.5px; line-height:1.8; color:var(--muted);
+  }
+  #ruleBox.show{ display:block; }
+  #ruleBox b{ color:var(--ink); }
+  #ruleBox ul{ margin:8px 0 0; padding-left:20px; }
+
+  /* ---------- game ---------- */
+  #game{ display:none; }
+  #game.show{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+  .turn-indicator{ display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
+  .turn-dot{ width:16px; height:16px; border-radius:50%; }
+  .turn-dot.p1{ background:linear-gradient(135deg,var(--p1-hi),var(--p1)); }
+  .turn-dot.p2{ background:linear-gradient(135deg,var(--p2-hi),var(--p2)); }
+  .topbar-actions{ display:flex; gap:10px; }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .hint-line{ font-size:13px; color:var(--muted); margin-bottom:16px; min-height:18px; }
+  .hint-line b{ color:var(--gold); }
+
+  .board-wrap{ display:flex; justify-content:center; margin-bottom:14px; }
+  .meta-board{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    width:min(480px, 92vw); background:var(--panel); border-radius:18px; padding:12px;
+    box-shadow:0 14px 34px rgba(0,0,0,.5);
+  }
+
+  .small-board{
+    position:relative; background:var(--panel-2); border:2px solid var(--line); border-radius:12px;
+    padding:6px; transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .small-board.active{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(242,183,5,0.18); }
+  .small-board.win-board{ animation: win-pulse-board 1s ease-in-out infinite; }
+  @keyframes win-pulse-board{ 0%,100%{ box-shadow:0 0 0 3px rgba(242,183,5,.9);} 50%{ box-shadow:0 0 0 3px rgba(242,183,5,.25);} }
+
+  .cells{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .cell{
+    aspect-ratio:1; background:var(--cell-bg); border-radius:6px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+  }
+  .cell.clickable{ cursor:pointer; }
+  .cell.clickable:hover{ background:#1a2836; }
+
+  .board-overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    border-radius:10px; pointer-events:none;
+  }
+  .small-board.won-p1 .board-overlay{ background:rgba(47,111,237,0.26); }
+  .small-board.won-p2 .board-overlay{ background:rgba(224,80,90,0.26); }
+  .small-board.drawn .board-overlay{ background:rgba(146,171,181,0.16); }
+  .draw-mark{ font-size:clamp(28px,7vw,40px); color:var(--muted); font-weight:900; }
+  .mark.big{ width:58%; height:58%; }
+
+  /* X, O 마크 - 단순 원형 대신 실제 X/O 기호를 입체감 있게 표현 */
+  .mark{ position:relative; width:60%; height:60%; }
+  .mark.p1::before, .mark.p1::after{
+    content:''; position:absolute; top:50%; left:50%; width:102%; height:19%;
+    border-radius:999px;
+    background:linear-gradient(135deg, var(--p1-hi), var(--p1) 55%, var(--p1-lo));
+    box-shadow:0 2px 4px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.35), inset 0 -2px 3px rgba(0,0,0,.25);
+  }
+  .mark.p1::before{ transform:translate(-50%,-50%) rotate(45deg); }
+  .mark.p1::after{ transform:translate(-50%,-50%) rotate(-45deg); }
+  .mark.p2{
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 36% 30%, rgba(255,255,255,.6), transparent 32%),
+      radial-gradient(circle, transparent 0%, transparent 50%, var(--p2-hi) 54%, var(--p2) 72%, var(--p2-lo) 100%);
+    box-shadow:0 2px 4px rgba(0,0,0,.4);
+  }
+  .cell .mark.just-moved{ outline:2.5px solid var(--ok); outline-offset:3px; border-radius:8px; }
+
+  .trays{ display:flex; justify-content:center; gap:28px; margin:14px 0 20px; flex-wrap:wrap; }
+  .legend{ display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; border:1.5px solid var(--line); font-size:14px; font-weight:700; color:var(--muted); }
+  .legend.active{ border-color:var(--gold); color:var(--ink); }
+  .legend .dot{ width:16px; height:16px; }
+  .legend .dot.p1{ position:relative; }
+  .legend .dot.p1::before, .legend .dot.p1::after{
+    content:''; position:absolute; top:50%; left:50%; width:100%; height:24%; border-radius:999px;
+    background:linear-gradient(135deg,var(--p1-hi),var(--p1));
+  }
+  .legend .dot.p1::before{ transform:translate(-50%,-50%) rotate(45deg); }
+  .legend .dot.p1::after{ transform:translate(-50%,-50%) rotate(-45deg); }
+  .legend .dot.p2{ border-radius:50%; background:radial-gradient(circle, transparent 0%, transparent 46%, var(--p2-hi) 52%, var(--p2) 100%); }
+
+  .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
+  #log{
+    display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; max-height:150px; overflow-y:auto; font-size:13.5px; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.9; margin-top:10px;
+  }
+  #log.show{ display:block; }
+  #log div:first-child{ color:var(--ink); }
+
+  #result{
+    display:none; position:fixed; inset:0; z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+    background:rgba(6,10,15,0.72); backdrop-filter:blur(2px);
+  }
+  #result.show{ display:flex; }
+  .modal-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:20px;
+    padding:38px 32px 30px; text-align:center; max-width:360px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+    animation: pop-in .22s ease;
+  }
+  @keyframes pop-in{ from{ transform:scale(.86); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .result-emoji{ font-size:52px; line-height:1; margin-bottom:6px; }
+  #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:30px; margin:0 0 10px; }
+  #result p{ color:var(--muted); margin:0 0 22px; font-size:14px; }
+  #undoFromResultBtn{ margin-top:14px; width:100%; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Math Club Games</div>
+  <h1>궁극의 틱택토</h1>
+
+  <div id="setup">
+    <div class="hint">3x3 작은 틱택토 보드 9개가 모인 큰 보드에서 겨루는 게임이에요. 내가 둔 칸의 위치가 상대방이 다음에 둘 수 있는 보드를 정해줘요.</div>
+
+    <div class="seg-label">대전 방식</div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="2p" class="active">2인 대전</button>
+      <button data-mode="ai">컴퓨터와 대전</button>
+    </div>
+
+    <div id="aiOptions">
+      <div class="seg-label">난이도</div>
+      <div class="seg" id="diffSeg">
+        <button data-diff="easy" class="active">쉬움</button>
+        <button data-diff="normal">보통</button>
+      </div>
+      <div class="seg-label">내 팀</div>
+      <div class="seg" id="teamSeg">
+        <button data-team="1" class="active">파랑 X (선공)</button>
+        <button data-team="2">빨강 O (후공)</button>
+      </div>
+    </div>
+
+    <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
+    <div id="ruleBox">
+      <b>궁극의 틱택토 규칙</b>
+      <ul>
+        <li>3x3 칸의 작은 틱택토 보드 9개가 모여 큰 보드를 이룹니다.</li>
+        <li>첫 수는 81칸 중 아무 곳에나 둘 수 있습니다.</li>
+        <li>내가 작은 보드 안에서 둔 칸의 위치(1~9번째 칸)가, 상대방이 다음에 둬야 할 작은 보드를 정합니다.</li>
+        <li>지정된 작은 보드가 이미 끝난(승리/무승부) 보드라면, 상대방은 아무 보드에나 자유롭게 둘 수 있습니다.</li>
+        <li>작은 보드 하나에서 가로·세로·대각선을 먼저 만들면 그 보드를 차지합니다.</li>
+        <li>차지한 작은 보드들로 큰 보드에서 가로·세로·대각선을 먼저 만들면 최종 승리합니다.</li>
+        <li>더 이상 둘 곳이 없는데 아무도 큰 보드를 완성하지 못하면 무승부입니다.</li>
+      </ul>
+    </div>
+
+    <button class="start-btn" id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <div class="turn-indicator" id="turnIndicator"><span class="turn-dot p1"></span> 파랑 차례</div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="undoBtn" disabled>실행 취소</button>
+        <button class="ghost-btn" id="restartBtn">새 게임</button>
+      </div>
+    </div>
+    <div class="hint-line" id="hintLine"></div>
+
+    <div class="board-wrap">
+      <div class="meta-board" id="metaBoard"></div>
+    </div>
+
+    <div class="trays" id="trays">
+      <div class="legend p1"><span class="dot p1"></span>파랑 (X)</div>
+      <div class="legend p2"><span class="dot p2"></span>빨강 (O)</div>
+    </div>
+
+    <button class="rule-toggle" id="logToggleBtn">진행 기록 보기</button>
+    <div id="log"></div>
+  </div>
+
+  <div id="result">
+    <div class="modal-card">
+      <div class="result-emoji" id="resultEmoji">🏆</div>
+      <h2 id="resultTitle">파랑 승리!</h2>
+      <p id="resultDesc"></p>
+      <button class="start-btn" id="playAgainBtn">다시 하기</button>
+      <button class="ghost-btn" id="undoFromResultBtn">방금 수 취소하기</button>
+    </div>
+  </div>
+
+  <footer>수학 동아리 · 보드 속의 보드, 궁극의 전략 게임</footer>
+</div>
+
+<script>
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const POS_WEIGHT = [3,2,3,2,4,2,3,2,3];
+
+  let mode = '2p';
+  let aiDifficulty = 'easy';
+  let humanTeam = 1;
+  let aiPlayer = 2;
+
+  let smallBoards = [];
+  let metaBoard = [];
+  let activeBoard = null;
+  let current = 1;
+  let gameOver = false;
+  let winnerPlayer = null;
+  let isDraw = false;
+  let winLine = null;
+  let lastMove = null; // {board, cell}
+  let logEntries = [];
+  let history = [];
+
+  function playerName(p){ return p === 1 ? '파랑' : '빨강'; }
+
+  function newSmallBoards(){ return Array.from({length:9}, () => Array(9).fill(null)); }
+
+  function checkSmallWinner(cells){
+    for(const [a,b,c] of LINES){
+      if(cells[a] !== null && cells[a] === cells[b] && cells[b] === cells[c]) return cells[a];
+    }
+    return null;
+  }
+  function checkMetaWinner(meta){
+    for(const line of LINES){
+      const [a,b,c] = line;
+      if((meta[a] === 1 || meta[a] === 2) && meta[a] === meta[b] && meta[b] === meta[c]){
+        return { player: meta[a], line };
+      }
+    }
+    return null;
+  }
+  function isBoardPlayable(meta, b){ return meta[b] === null; }
+
+  /* activeBoard가 이미 끝난 보드를 가리키면 자유 수(null)로 취급 - legalMoves와 화면 강조가 항상 이 값을 따라야 함 */
+  function getRequiredBoard(){
+    return (activeBoard !== null && isBoardPlayable(metaBoard, activeBoard)) ? activeBoard : null;
+  }
+
+  function legalMoves(){
+    const required = getRequiredBoard();
+    let boards = [];
+    if(required !== null){
+      boards = [required];
+    } else {
+      for(let b=0;b<9;b++) if(isBoardPlayable(metaBoard, b)) boards.push(b);
+    }
+    const moves = [];
+    for(const b of boards){
+      for(let c=0;c<9;c++) if(smallBoards[b][c] === null) moves.push({ board:b, cell:c });
+    }
+    return moves;
+  }
+
+  function log(msg){ logEntries.unshift(msg); }
+
+  function snapshot(){
+    return JSON.stringify({ smallBoards, metaBoard, activeBoard, current, gameOver, winnerPlayer, isDraw, winLine, lastMove, logEntries });
+  }
+  function pushUndo(){
+    history.push(snapshot());
+    document.getElementById('undoBtn').disabled = false;
+  }
+  function restore(s){
+    const st = JSON.parse(s);
+    smallBoards = st.smallBoards; metaBoard = st.metaBoard; activeBoard = st.activeBoard;
+    current = st.current; gameOver = st.gameOver; winnerPlayer = st.winnerPlayer;
+    isDraw = st.isDraw; winLine = st.winLine; lastMove = st.lastMove; logEntries = st.logEntries;
+  }
+  function undo(){
+    if(history.length === 0) return;
+    restore(history.pop());
+    if(mode === 'ai' && !gameOver && current === aiPlayer && history.length > 0){
+      restore(history.pop());
+    }
+    document.getElementById('undoBtn').disabled = history.length === 0;
+    render();
+  }
+
+  function startGame(){
+    smallBoards = newSmallBoards();
+    metaBoard = Array(9).fill(null);
+    activeBoard = null;
+    current = 1;
+    gameOver = false;
+    winnerPlayer = null;
+    isDraw = false;
+    winLine = null;
+    lastMove = null;
+    logEntries = [];
+    history = [];
+    aiPlayer = humanTeam === 1 ? 2 : 1;
+    log(mode === 'ai'
+      ? `게임 시작 · 컴퓨터(${aiDifficulty === 'easy' ? '쉬움' : '보통'}) 대전 · 나는 ${playerName(humanTeam)}`
+      : '게임 시작 · 2인 대전');
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').classList.add('show');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('undoBtn').disabled = true;
+    render();
+
+    if(mode === 'ai' && current === aiPlayer) setTimeout(aiMove, 500);
+  }
+
+  function restart(){
+    if(!gameOver && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
+    document.getElementById('game').classList.remove('show');
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('result').classList.remove('show');
+  }
+
+  function isHumanTurnClickable(){
+    if(gameOver) return false;
+    if(mode === 'ai' && current === aiPlayer) return false;
+    return true;
+  }
+
+  function playMove(board, cell, mover){
+    const legal = legalMoves();
+    if(!legal.some(m => m.board === board && m.cell === cell)) return false;
+    pushUndo();
+    smallBoards[board][cell] = mover;
+    lastMove = { board, cell };
+
+    const smallWinner = checkSmallWinner(smallBoards[board]);
+    if(smallWinner){
+      metaBoard[board] = smallWinner;
+    } else if(smallBoards[board].every(v => v !== null)){
+      metaBoard[board] = 'draw';
+    }
+
+    const metaWin = checkMetaWinner(metaBoard);
+    const aiTag = (mode === 'ai' && mover === aiPlayer) ? '(컴퓨터) ' : '';
+    if(metaWin){
+      gameOver = true;
+      winnerPlayer = metaWin.player;
+      winLine = metaWin.line;
+      log(`${aiTag}${playerName(metaWin.player)} 최종 승리!`);
+    } else if(metaBoard.every(v => v !== null)){
+      gameOver = true;
+      isDraw = true;
+      log('무승부!');
+    } else {
+      activeBoard = isBoardPlayable(metaBoard, cell) ? cell : null;
+      current = current === 1 ? 2 : 1;
+      log(`${aiTag}${playerName(mover)} → ${board+1}번 보드 ${cell+1}번 칸`);
+    }
+    render();
+
+    if(!gameOver && mode === 'ai' && current === aiPlayer){
+      setTimeout(aiMove, 500);
+    }
+    return true;
+  }
+
+  function handleCellClick(b, c){
+    if(!isHumanTurnClickable()) return;
+    playMove(b, c, current);
+  }
+
+  /* ---------- AI ---------- */
+  function simulateMove(sb, mb, board, cell, player){
+    const sb2 = sb.map(row => row.slice());
+    const mb2 = mb.slice();
+    sb2[board][cell] = player;
+    const win = checkSmallWinner(sb2[board]);
+    if(win) mb2[board] = win;
+    else if(sb2[board].every(v => v !== null)) mb2[board] = 'draw';
+    return { sb2, mb2 };
+  }
+
+  function evaluateMove(move, player){
+    const opponent = player === 1 ? 2 : 1;
+    const { sb2, mb2 } = simulateMove(smallBoards, metaBoard, move.board, move.cell, player);
+    let score = 0;
+
+    const metaWin = checkMetaWinner(mb2);
+    if(metaWin && metaWin.player === player) return 100000;
+
+    if(mb2[move.board] === player){
+      score += 500 + POS_WEIGHT[move.board] * 20;
+    } else if(mb2[move.board] === 'draw' && metaBoard[move.board] === null){
+      score -= 50;
+    }
+
+    const origCells = smallBoards[move.board];
+    const wouldOppWinHere = (() => {
+      const t = origCells.slice();
+      if(t[move.cell] !== null) return false;
+      t[move.cell] = opponent;
+      return checkSmallWinner(t) === opponent;
+    })();
+    if(wouldOppWinHere) score += 300;
+
+    score += POS_WEIGHT[move.cell] * 5;
+
+    const nextActive = mb2[move.cell] === null ? move.cell : null;
+    if(nextActive === null){
+      score -= 40;
+    } else {
+      const boardCells = sb2[nextActive];
+      let oppWinningCells = [];
+      boardCells.forEach((v, idx) => {
+        if(v !== null) return;
+        const t = boardCells.slice(); t[idx] = opponent;
+        if(checkSmallWinner(t) === opponent) oppWinningCells.push(idx);
+      });
+      if(oppWinningCells.length){
+        let worst = false;
+        for(const idx of oppWinningCells){
+          const mb3 = mb2.slice();
+          mb3[nextActive] = opponent;
+          if(checkMetaWinner(mb3)?.player === opponent){ worst = true; break; }
+        }
+        score -= worst ? 2000 : 400;
+      } else {
+        score += POS_WEIGHT[nextActive] * 3;
+      }
+    }
+    return score;
+  }
+
+  function aiMove(){
+    if(gameOver) return;
+    const moves = legalMoves();
+    if(moves.length === 0) return;
+    let chosen;
+    if(aiDifficulty === 'normal'){
+      let best = -Infinity, bestMoves = [];
+      for(const m of moves){
+        const s = evaluateMove(m, aiPlayer);
+        if(s > best){ best = s; bestMoves = [m]; }
+        else if(s === best) bestMoves.push(m);
+      }
+      chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    } else {
+      chosen = moves[Math.floor(Math.random() * moves.length)];
+    }
+    playMove(chosen.board, chosen.cell, aiPlayer);
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    const metaEl = document.getElementById('metaBoard');
+    metaEl.innerHTML = '';
+    const clickableNow = isHumanTurnClickable();
+    const requiredBoard = getRequiredBoard();
+
+    for(let b = 0; b < 9; b++){
+      const boardDiv = document.createElement('div');
+      boardDiv.className = 'small-board';
+      const boardPlayable = clickableNow && isBoardPlayable(metaBoard, b) && (requiredBoard === null || requiredBoard === b);
+      if(boardPlayable) boardDiv.classList.add('active');
+      if(metaBoard[b] === 1) boardDiv.classList.add('won-p1');
+      if(metaBoard[b] === 2) boardDiv.classList.add('won-p2');
+      if(metaBoard[b] === 'draw') boardDiv.classList.add('drawn');
+      if(winLine && winLine.includes(b)) boardDiv.classList.add('win-board');
+
+      const cellsWrap = document.createElement('div');
+      cellsWrap.className = 'cells';
+      for(let c = 0; c < 9; c++){
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'cell';
+        const val = smallBoards[b][c];
+        if(boardPlayable && val === null){
+          cellDiv.classList.add('clickable');
+          cellDiv.addEventListener('click', () => handleCellClick(b, c));
+        }
+        if(val){
+          const mark = document.createElement('div');
+          let cls = `mark p${val}`;
+          if(lastMove && lastMove.board === b && lastMove.cell === c) cls += ' just-moved';
+          mark.className = cls;
+          cellDiv.appendChild(mark);
+        }
+        cellsWrap.appendChild(cellDiv);
+      }
+      boardDiv.appendChild(cellsWrap);
+
+      if(metaBoard[b] !== null){
+        const overlay = document.createElement('div');
+        overlay.className = 'board-overlay';
+        if(metaBoard[b] === 'draw'){
+          overlay.innerHTML = '<span class="draw-mark">무</span>';
+        } else {
+          const bigMark = document.createElement('div');
+          bigMark.className = `mark big p${metaBoard[b]}`;
+          overlay.appendChild(bigMark);
+        }
+        boardDiv.appendChild(overlay);
+      }
+
+      metaEl.appendChild(boardDiv);
+    }
+
+    document.querySelectorAll('.legend').forEach(el => el.classList.remove('active'));
+    if(!gameOver){
+      document.querySelector(`.legend.p${current}`).classList.add('active');
+    }
+
+    const dot = document.querySelector('#turnIndicator .turn-dot');
+    dot.className = 'turn-dot p' + current;
+    document.getElementById('turnIndicator').lastChild.textContent = ` ${playerName(current)} 차례`;
+
+    const hintEl = document.getElementById('hintLine');
+    if(gameOver){
+      hintEl.textContent = '';
+    } else if(requiredBoard === null){
+      hintEl.innerHTML = activeBoard === null
+        ? '아무 보드에나 둘 수 있어요'
+        : '아무 보드에나 둘 수 있어요 (지정된 보드가 이미 끝났어요)';
+    } else {
+      hintEl.innerHTML = `<b>${requiredBoard+1}번</b> 보드에 둬야 해요`;
+    }
+
+    document.getElementById('log').innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
+    document.getElementById('undoBtn').disabled = history.length === 0;
+
+    if(gameOver){
+      if(isDraw){
+        document.getElementById('resultEmoji').textContent = '🤝';
+        document.getElementById('resultTitle').textContent = '무승부!';
+        document.getElementById('resultDesc').textContent = '모든 보드가 끝났어요. 다시 하기로 새로 도전해보세요.';
+      } else {
+        document.getElementById('resultEmoji').textContent = '🏆';
+        document.getElementById('resultTitle').textContent = `${playerName(winnerPlayer)} 최종 승리!`;
+        document.getElementById('resultDesc').textContent = '다시 하기를 누르면 새로 시작하고, 방금 수가 실수였다면 취소할 수 있어요.';
+      }
+      document.getElementById('result').classList.add('show');
+    } else {
+      document.getElementById('result').classList.remove('show');
+    }
+  }
+
+  document.getElementById('modeSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('aiOptions').classList.toggle('show', mode === 'ai');
+  });
+  document.getElementById('diffSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    aiDifficulty = btn.dataset.diff;
+    document.querySelectorAll('#diffSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('teamSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    humanTeam = Number(btn.dataset.team);
+    document.querySelectorAll('#teamSeg button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('ruleToggleBtn').addEventListener('click', () => {
+    document.getElementById('ruleBox').classList.toggle('show');
+  });
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('playAgainBtn').addEventListener('click', restart);
+  document.getElementById('undoFromResultBtn').addEventListener('click', undo);
+  document.getElementById('logToggleBtn').addEventListener('click', () => {
+    const logEl = document.getElementById('log');
+    const nowShown = logEl.classList.toggle('show');
+    document.getElementById('logToggleBtn').textContent = nowShown ? '진행 기록 숨기기' : '진행 기록 보기';
+  });
+</script>
+</body>
+</html>
