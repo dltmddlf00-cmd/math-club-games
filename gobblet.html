@@ -24,10 +24,10 @@
   html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
   body{ background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%); }
   .wrap{ max-width:760px; margin:0 auto; padding:28px 20px 60px; }
-
+ 
   h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,36px); color:var(--gold); margin:0 0 4px; }
   .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
-
+ 
   /* ---------- setup ---------- */
   #setup{ max-width:520px; margin:36px auto 0; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 28px; }
   #setup .hint{ font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
@@ -58,11 +58,11 @@
   #ruleBox.show{ display:block; }
   #ruleBox b{ color:var(--ink); }
   #ruleBox ul{ margin:8px 0 0; padding-left:20px; }
-
+ 
   /* ---------- game ---------- */
   #game{ display:none; }
   #game.show{ display:block; }
-
+ 
   .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
   .turn-indicator{ display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
   .turn-dot{ width:16px; height:16px; border-radius:50%; }
@@ -75,7 +75,7 @@
   }
   .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
   .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
-
+ 
   .board-wrap{ display:flex; justify-content:center; margin-bottom:22px; }
   .board{
     display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
@@ -92,15 +92,46 @@
   @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-5px); } 75%{ transform:translateX(5px); } }
   .cell.win-cell{ border-color:var(--gold); background:rgba(242,183,5,0.12); animation: win-pulse 1s ease-in-out infinite; }
   @keyframes win-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(242,183,5,0.35); } 50%{ box-shadow:0 0 0 8px rgba(242,183,5,0); } }
-  .token.just-moved{ box-shadow:0 0 0 3px var(--ok), 0 2px 5px rgba(0,0,0,.5), inset 0 -2px 3px rgba(0,0,0,.25); }
-
-  .token{ border-radius:50%; flex:0 0 auto; box-shadow:0 2px 5px rgba(0,0,0,.5), inset 0 -2px 3px rgba(0,0,0,.25); }
-  .token.sm{ width:24px; height:24px; }
-  .token.md{ width:38px; height:38px; }
-  .token.lg{ width:54px; height:54px; }
-  .token.p1{ background:radial-gradient(circle at 32% 28%, var(--p1-hi), var(--p1) 55%, var(--p1-lo) 100%); }
-  .token.p2{ background:radial-gradient(circle at 32% 28%, var(--p2-hi), var(--p2) 55%, var(--p2-lo) 100%); }
-
+ 
+  /* 체스 폰 실루엣: 밑받침(after) + 머리(before) 2단 구조로 '말'처럼 보이게 함 */
+  .token{
+    position:relative; flex:0 0 auto;
+  }
+  .token.p1{ --hi:var(--p1-hi); --mid:var(--p1); --lo:var(--p1-lo); }
+  .token.p2{ --hi:var(--p2-hi); --mid:var(--p2); --lo:var(--p2-lo); }
+  .token::after{
+    /* 밑받침 */
+    content:'';
+    position:absolute; left:2%; right:2%; bottom:0; height:60%;
+    border-radius:50% 50% 42% 42% / 68% 68% 32% 32%;
+    background:linear-gradient(165deg, var(--hi), var(--mid) 55%, var(--lo));
+    box-shadow:
+      inset 0 2px 3px rgba(255,255,255,.28),
+      inset 0 -7px 9px rgba(0,0,0,.35),
+      0 3px 6px rgba(0,0,0,.5);
+  }
+  .token::before{
+    /* 머리 */
+    content:'';
+    position:absolute; left:25%; right:25%; top:0; height:48%;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--hi), var(--mid) 60%, var(--lo) 100%);
+    box-shadow:
+      inset 0 2px 2px rgba(255,255,255,.3),
+      inset 0 -4px 5px rgba(0,0,0,.3),
+      0 2px 4px rgba(0,0,0,.45);
+    z-index:1;
+  }
+  .token.sm{ width:24px; height:28px; }
+  .token.md{ width:36px; height:42px; }
+  .token.lg{ width:50px; height:58px; }
+  .token.just-moved::after{ box-shadow:
+      inset 0 2px 3px rgba(255,255,255,.28),
+      inset 0 -7px 9px rgba(0,0,0,.35),
+      0 3px 6px rgba(0,0,0,.5),
+      0 0 0 3px var(--ok);
+  }
+ 
   .trays{ display:flex; flex-direction:column; gap:14px; margin-bottom:22px; }
   .tray{
     display:flex; align-items:center; gap:16px; padding:14px 18px; border-radius:14px;
@@ -114,7 +145,7 @@
   .token.selectable:hover{ filter:brightness(1.15); }
   .token.used{ opacity:0.14; filter:grayscale(1); pointer-events:none; }
   .token.picked{ outline:3px solid var(--gold); outline-offset:2px; }
-
+ 
   .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
   #log{
     display:none;
@@ -124,7 +155,7 @@
   }
   #log.show{ display:block; }
   #log div:first-child{ color:var(--ink); }
-
+ 
   #result{
     display:none; position:fixed; inset:0; z-index:50;
     align-items:center; justify-content:center; padding:20px;
@@ -142,7 +173,7 @@
   #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:30px; margin:0 0 10px; }
   #result p{ color:var(--muted); margin:0 0 22px; font-size:14px; }
   #undoFromResultBtn{ margin-top:14px; width:100%; }
-
+ 
   footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
 </style>
 </head>
@@ -150,16 +181,16 @@
 <div class="wrap">
   <div class="eyebrow">Math Club Games</div>
   <h1>가블리트 가블러스</h1>
-
+ 
   <div id="setup">
     <div class="hint">3x3 판에 크기가 다른 말을 놓거나 옮겨서 먼저 한 줄을 완성하면 승리하는 게임이에요. 큰 말로 작은 말을 덮을 수 있고, 내 말을 옮기다가 그 밑에 숨어있던 상대 말이 드러나 상대가 한 줄을 완성하면 그 즉시 상대가 승리합니다.</div>
-
+ 
     <div class="seg-label">대전 방식</div>
     <div class="seg" id="modeSeg">
       <button data-mode="2p" class="active">2인 대전</button>
       <button data-mode="ai">컴퓨터와 대전</button>
     </div>
-
+ 
     <div id="aiOptions">
       <div class="seg-label">난이도</div>
       <div class="seg" id="diffSeg">
@@ -172,7 +203,7 @@
         <button data-team="2">빨강 (후공)</button>
       </div>
     </div>
-
+ 
     <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
     <div id="ruleBox">
       <b>가블리트 가블러스 규칙</b>
@@ -184,10 +215,10 @@
         <li>가로, 세로, 대각선 중 먼저 한 줄을 완성하는 쪽이 승리합니다.</li>
       </ul>
     </div>
-
+ 
     <button class="start-btn" id="startBtn">게임 시작</button>
   </div>
-
+ 
   <div id="game">
     <div class="topbar">
       <div class="turn-indicator" id="turnIndicator"><span class="turn-dot p1"></span> 파랑 차례</div>
@@ -196,15 +227,15 @@
         <button class="ghost-btn" id="restartBtn">새 게임</button>
       </div>
     </div>
-
+ 
     <div class="board-wrap"><div class="board" id="board"></div></div>
-
+ 
     <div class="trays" id="trays"></div>
-
+ 
     <button class="rule-toggle" id="logToggleBtn">진행 기록 보기</button>
     <div id="log"></div>
   </div>
-
+ 
   <div id="result">
     <div class="modal-card">
       <div class="result-emoji">🏆</div>
@@ -214,19 +245,19 @@
       <button class="ghost-btn" id="undoFromResultBtn">방금 수 취소하기</button>
     </div>
   </div>
-
+ 
   <footer>수학 동아리 · 크기 비교로 배우는 전략 게임</footer>
 </div>
-
+ 
 <script>
   const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   const SIZE_CLASS = {1:'sm', 2:'md', 3:'lg'};
-
+ 
   let mode = '2p';
   let aiDifficulty = 'easy';
   let humanTeam = 1;
   let aiPlayer = 2;
-
+ 
   let board = [];
   let supply = {};
   let current = 1;
@@ -238,14 +269,14 @@
   let flashCell = null;
   let winLine = null;
   let lastMoveTo = null;
-
+ 
   function playerName(p){ return p === 1 ? '파랑' : '빨강'; }
-
+ 
   function topOf(cell){ return cell.length ? cell[cell.length - 1] : null; }
-
+ 
   function newBoard(){ return Array.from({length:9}, () => []); }
   function newSupply(){ return { 1:{1:2,2:2,3:2}, 2:{1:2,2:2,3:2} }; }
-
+ 
   function findWinLine(b){
     for(const p of [1,2]){
       for(const line of LINES){
@@ -258,9 +289,9 @@
     const w = findWinLine(b);
     return w ? w.player : null;
   }
-
+ 
   function log(msg){ logEntries.unshift(msg); }
-
+ 
   function snapshot(){
     return JSON.stringify({ board, supply, current, selected: null, gameOver, winnerPlayer, logEntries, winLine, lastMoveTo });
   }
@@ -284,7 +315,7 @@
     document.getElementById('undoBtn').disabled = history.length === 0;
     render();
   }
-
+ 
   function startGame(){
     board = newBoard();
     supply = newSupply();
@@ -300,29 +331,29 @@
     log(mode === 'ai'
       ? `게임 시작 · 컴퓨터(${aiDifficulty === 'easy' ? '쉬움' : '보통'}) 대전 · 나는 ${playerName(humanTeam)}`
       : '게임 시작 · 2인 대전');
-
+ 
     document.getElementById('setup').style.display = 'none';
     document.getElementById('game').classList.add('show');
     document.getElementById('result').classList.remove('show');
     document.getElementById('undoBtn').disabled = true;
     render();
-
+ 
     if(mode === 'ai' && current === aiPlayer) setTimeout(aiMove, 500);
   }
-
+ 
   function restart(){
     if(!gameOver && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
     document.getElementById('game').classList.remove('show');
     document.getElementById('setup').style.display = 'block';
     document.getElementById('result').classList.remove('show');
   }
-
+ 
   function isHumanTurnClickable(){
     if(gameOver) return false;
     if(mode === 'ai' && current === aiPlayer) return false;
     return true;
   }
-
+ 
   function selectSupply(size){
     if(!isHumanTurnClickable()) return;
     if(supply[current][size] <= 0) return;
@@ -330,11 +361,11 @@
     else selected = { source:'supply', size };
     render();
   }
-
+ 
   function clickCell(idx){
     if(!isHumanTurnClickable()) return;
     const top = topOf(board[idx]);
-
+ 
     if(selected){
       if(selected.source === 'board' && selected.cellIndex === idx){ selected = null; render(); return; }
       const destTop = topOf(board[idx]);
@@ -345,13 +376,13 @@
       executeMove(idx);
       return;
     }
-
+ 
     if(top && top.player === current){
       selected = { source:'board', cellIndex: idx, size: top.size };
       render();
     }
   }
-
+ 
   function executeMove(destIndex){
     pushUndo();
     const size = selected.size;
@@ -364,7 +395,7 @@
     board[destIndex].push({ player: current, size });
     selected = null;
     lastMoveTo = destIndex;
-
+ 
     const winInfo = findWinLine(board);
     if(winInfo){
       gameOver = true;
@@ -377,12 +408,12 @@
       log(`${playerName(mover)} 이동`);
     }
     render();
-
+ 
     if(!gameOver && mode === 'ai' && current === aiPlayer){
       setTimeout(aiMove, 500);
     }
   }
-
+ 
   function getAllLegalMoves(player){
     const moves = [];
     for(const size of [1,2,3]){
@@ -405,7 +436,7 @@
     }
     return moves;
   }
-
+ 
   function simulateMove(move, player){
     const b = board.map(cell => cell.slice());
     if(move.source === 'supply'){
@@ -416,7 +447,7 @@
     }
     return b;
   }
-
+ 
   function aiMove(){
     if(gameOver) return;
     const player = aiPlayer;
@@ -429,7 +460,7 @@
       return;
     }
     let chosen = null;
-
+ 
     if(aiDifficulty === 'normal'){
       for(const m of moves){
         if(checkWinnerOnBoard(simulateMove(m, player)) === player){ chosen = m; break; }
@@ -460,15 +491,15 @@
         }
       }
     }
-
+ 
     if(!chosen) chosen = moves[Math.floor(Math.random() * moves.length)];
-
+ 
     pushUndo();
     if(chosen.source === 'supply') supply[player][chosen.size] -= 1;
     else board[chosen.cellIndex].pop();
     board[chosen.dest].push({ player, size: chosen.size });
     lastMoveTo = chosen.dest;
-
+ 
     const winInfo = findWinLine(board);
     if(winInfo){
       gameOver = true;
@@ -482,11 +513,11 @@
     }
     render();
   }
-
+ 
   function tokenHTML(piece, extraClasses){
     return `<span class="token ${SIZE_CLASS[piece.size]} p${piece.player} ${extraClasses||''}"></span>`;
   }
-
+ 
   function render(){
     const boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
@@ -506,7 +537,7 @@
       div.addEventListener('click', () => clickCell(i));
       boardEl.appendChild(div);
     });
-
+ 
     const traysEl = document.getElementById('trays');
     traysEl.innerHTML = '';
     [1,2].forEach(p => {
@@ -533,14 +564,14 @@
       });
       traysEl.appendChild(tray);
     });
-
+ 
     const dot = document.querySelector('#turnIndicator .turn-dot');
     dot.className = 'turn-dot p' + current;
     document.getElementById('turnIndicator').lastChild.textContent = ` ${playerName(current)} 차례`;
-
+ 
     document.getElementById('log').innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
     document.getElementById('undoBtn').disabled = history.length === 0;
-
+ 
     if(gameOver){
       document.getElementById('resultTitle').textContent = `${playerName(winnerPlayer)} 승리!`;
       document.getElementById('resultDesc').textContent = '다시 하기를 누르면 새로 시작하고, 방금 수가 실수였다면 취소할 수 있어요.';
@@ -549,7 +580,7 @@
       document.getElementById('result').classList.remove('show');
     }
   }
-
+ 
   document.getElementById('modeSeg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if(!btn) return;
@@ -578,8 +609,8 @@
   document.getElementById('playAgainBtn').addEventListener('click', restart);
   document.getElementById('undoFromResultBtn').addEventListener('click', undo);
   document.getElementById('logToggleBtn').addEventListener('click', () => {
-    const log = document.getElementById('log');
-    const nowShown = log.classList.toggle('show');
+    const logEl = document.getElementById('log');
+    const nowShown = logEl.classList.toggle('show');
     document.getElementById('logToggleBtn').textContent = nowShown ? '진행 기록 숨기기' : '진행 기록 보기';
   });
 </script>
