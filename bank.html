@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>확률 뱅킹 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --panel: #16212c;
+    --panel-2: #1c2a37;
+    --line: #2c4451;
+    --ink: #f3efe3;
+    --muted: #92abb5;
+    --gold: #f2b705;
+    --ok: #4fc8c0;
+    --danger: #e05353;
+    --p1: #2f6fed; --p1-hi:#a9c6ff; --p1-lo:#1b4fc4;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',sans-serif; }
+  body{ background-image: radial-gradient(circle at 50% 0%, #16232f 0%, var(--bg) 60%); }
+  .wrap{ max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+
+  h1{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; font-size: clamp(26px,4vw,36px); color:var(--gold); margin:0 0 4px; }
+  .eyebrow{ font-size:13px; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ---------- setup ---------- */
+  #setup{ max-width:560px; margin:36px auto 0; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 28px; }
+  #setup .hint{ font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+  .field-label{ font-size:13px; color:var(--muted); font-weight:700; margin:16px 0 8px; }
+  .num-row{ display:flex; align-items:center; gap:10px; }
+  .num-row input[type=number]{
+    width:80px; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:15px; font-family:'Noto Sans KR',sans-serif;
+  }
+  .num-row span{ font-size:13px; color:var(--muted); }
+
+  .bust-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .bust-chip{
+    display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px;
+    border:1.5px solid var(--line); background:var(--panel-2); cursor:pointer; font-size:14px; font-weight:700; color:var(--muted);
+  }
+  .bust-chip.active{ border-color:var(--danger); color:var(--ink); background:rgba(224,83,83,0.12); }
+  .bust-chip input{ display:none; }
+
+  #teamNames{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; margin-top:4px; }
+  #teamNames input{
+    width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel-2); color:var(--ink); font-size:14px; font-family:'Noto Sans KR',sans-serif;
+  }
+
+  .start-btn{
+    margin-top:26px; width:100%; padding:16px; border:none; border-radius:12px;
+    background:var(--gold); color:#231a00; font-weight:900; font-size:18px; cursor:pointer;
+  }
+  .start-btn:hover{ background:#ffcb2e; }
+  .rule-toggle{
+    margin-top:14px; margin-right:8px; background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .rule-toggle:hover{ color:var(--ink); border-color:var(--gold); }
+  #ruleBox, #mathBox{
+    display:none; margin-top:14px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px; font-size:13.5px; line-height:1.8; color:var(--muted);
+  }
+  #ruleBox.show, #mathBox.show{ display:block; }
+  #ruleBox b, #mathBox b{ color:var(--ink); }
+  #ruleBox ul{ margin:8px 0 0; padding-left:20px; }
+
+  .math-table{ width:100%; border-collapse:collapse; margin:10px 0; font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  .math-table th, .math-table td{ padding:6px 8px; text-align:center; border-bottom:1px solid var(--line); }
+  .math-table th{ color:var(--gold); font-weight:700; }
+  .breakeven{
+    margin-top:12px; padding:12px 14px; background:rgba(242,183,5,0.08); border:1px solid rgba(242,183,5,0.3);
+    border-radius:10px; color:var(--ink); font-size:13.5px;
+  }
+  .breakeven b{ color:var(--gold); }
+
+  /* ---------- game ---------- */
+  #game{ display:none; }
+  #game.show{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+  .round-indicator{ font-size:15px; font-weight:700; color:var(--gold); }
+  .topbar-actions{ display:flex; gap:10px; }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:8px 14px; border-radius:999px; font-size:13px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .ghost-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .turn-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:20px; padding:30px 24px;
+    text-align:center; margin-bottom:20px; box-shadow:0 14px 34px rgba(0,0,0,.5);
+  }
+  .turn-team{ font-size:14px; color:var(--muted); letter-spacing:0.06em; margin-bottom:4px; }
+  .turn-team b{ color:var(--ink); font-size:22px; display:block; margin-top:4px; }
+
+  .die-wrap{ display:flex; justify-content:center; margin:20px 0; }
+  .die{
+    width:96px; height:96px; border-radius:18px; padding:14px;
+    background:linear-gradient(160deg, #26384a, #16212c);
+    box-shadow: 0 10px 22px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.05);
+    display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:4px;
+  }
+  .die.rolling{ animation: die-roll .35s ease; }
+  @keyframes die-roll{ 0%{ transform:rotate(0deg) scale(1); } 40%{ transform:rotate(-14deg) scale(1.08); } 70%{ transform:rotate(10deg) scale(1.04); } 100%{ transform:rotate(0deg) scale(1); } }
+  .pip{ border-radius:50%; background:var(--ink); opacity:0; align-self:center; justify-self:center; width:14px; height:14px; }
+  .pip.show{ opacity:1; }
+  .die.bust-face .pip.show{ background:var(--danger); }
+
+  .turn-score{ font-size:15px; color:var(--muted); margin-top:6px; }
+  .turn-score b{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:34px; display:block; margin-top:2px; }
+
+  .turn-msg{ font-size:16px; font-weight:800; margin-top:14px; min-height:24px; }
+  .turn-msg.bust{ color:var(--danger); }
+  .turn-msg.bank{ color:var(--ok); }
+
+  .action-row{ display:flex; gap:12px; margin-top:20px; justify-content:center; flex-wrap:wrap; }
+  .action-btn{
+    flex:1; min-width:140px; max-width:220px; padding:16px; border:none; border-radius:12px;
+    font-weight:900; font-size:16px; cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  }
+  .action-btn.roll{ background:var(--gold); color:#231a00; }
+  .action-btn.roll:hover:not(:disabled){ background:#ffcb2e; }
+  .action-btn.bank{ background:var(--ok); color:#07211f; }
+  .action-btn.bank:hover:not(:disabled){ background:#6fe0d8; }
+  .action-btn.next{ background:var(--p1); color:#fff; }
+  .action-btn.next:hover{ background:#4a84ff; }
+  .action-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+
+  .leaderboard{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:18px; }
+  .leaderboard h3{ margin:0 0 12px; font-size:13px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; }
+  .lb-row{
+    display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px;
+    margin-bottom:6px; background:var(--panel-2);
+  }
+  .lb-row.current{ outline:2px solid var(--gold); background:rgba(242,183,5,0.08); }
+  .lb-rank{ font-family:'IBM Plex Mono',monospace; color:var(--muted); width:28px; }
+  .lb-name{ flex:1; font-weight:700; }
+  .lb-score{ font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--gold); }
+
+  .panel-title{ font-size:14px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 10px; }
+  #log{
+    display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; max-height:150px; overflow-y:auto; font-size:13.5px; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.9; margin-top:10px;
+  }
+  #log.show{ display:block; }
+  #log div:first-child{ color:var(--ink); }
+
+  #result{
+    display:none; position:fixed; inset:0; z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+    background:rgba(6,10,15,0.72); backdrop-filter:blur(2px);
+  }
+  #result.show{ display:flex; }
+  .modal-card{
+    background:var(--panel); border:2px solid var(--gold); border-radius:20px;
+    padding:38px 32px 30px; text-align:center; max-width:380px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+    animation: pop-in .22s ease;
+  }
+  @keyframes pop-in{ from{ transform:scale(.86); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .result-emoji{ font-size:52px; line-height:1; margin-bottom:6px; }
+  #result h2{ font-family:'Black Han Sans','Noto Sans KR',sans-serif; color:var(--gold); font-size:28px; margin:0 0 10px; }
+  #result p{ color:var(--muted); margin:0 0 18px; font-size:14px; }
+  #resultBoard{ text-align:left; margin-bottom:18px; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Math Club Games</div>
+  <h1>확률 뱅킹 게임</h1>
+
+  <div id="setup">
+    <div class="hint">모둠이 돌아가며 주사위를 굴려 점수를 쌓아요. 원할 때 "점수 가져가기"로 안전하게 챙기거나, 욕심내서 계속 굴릴 수 있어요. 정해진 숫자가 나오면 이번 턴에 쌓은 점수가 모두 사라져요.</div>
+
+    <div class="field-label">모둠 수</div>
+    <div class="num-row">
+      <input type="number" id="teamCountInput" min="2" max="8" value="5">
+      <span>모둠 (2~8)</span>
+    </div>
+
+    <div class="field-label">모둠 이름</div>
+    <div id="teamNames"></div>
+
+    <div class="field-label">라운드 수 (모두 한 바퀴 = 1라운드)</div>
+    <div class="num-row">
+      <input type="number" id="roundCountInput" min="1" max="15" value="5">
+      <span>라운드</span>
+    </div>
+
+    <div class="field-label">버스트 숫자 (이 숫자가 나오면 턴 점수를 모두 잃어요)</div>
+    <div class="bust-row" id="bustRow"></div>
+
+    <div>
+      <button class="rule-toggle" id="ruleToggleBtn">게임 규칙 다시 보기</button>
+      <button class="rule-toggle" id="mathToggleBtn">확률 포인트 보기 (도입에 활용)</button>
+    </div>
+    <div id="ruleBox">
+      <b>확률 뱅킹 게임 규칙</b>
+      <ul>
+        <li>모둠이 순서대로 돌아가며 한 턴씩 진행합니다.</li>
+        <li>자기 턴에는 주사위를 계속 굴릴 수 있고, 나온 숫자가 "이번 턴 점수"에 쌓입니다.</li>
+        <li>버스트 숫자가 나오면 이번 턴에 쌓은 점수가 전부 사라지고 턴이 끝납니다 (모둠 총점은 그대로예요).</li>
+        <li>버스트 되기 전에 원하는 시점에 "점수 가져가기"를 누르면, 이번 턴 점수가 모둠 총점에 안전하게 더해지고 턴이 끝납니다.</li>
+        <li>정해진 라운드를 모두 마치면, 총점이 가장 높은 모둠이 우승합니다.</li>
+      </ul>
+    </div>
+    <div id="mathBox"></div>
+
+    <button class="start-btn" id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <div class="round-indicator" id="roundIndicator">라운드 1 / 5</div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" id="undoBtn" disabled>실행 취소</button>
+        <button class="ghost-btn" id="restartBtn">새 게임</button>
+      </div>
+    </div>
+
+    <div class="turn-card">
+      <div class="turn-team">지금 차례<b id="turnTeamName">모둠 1</b></div>
+      <div class="die-wrap"><div class="die" id="die"></div></div>
+      <div class="turn-score">이번 턴 점수<b id="turnScoreVal">0</b></div>
+      <div class="turn-msg" id="turnMsg"></div>
+      <div class="action-row">
+        <button class="action-btn roll" id="rollBtn">🎲 주사위 굴리기</button>
+        <button class="action-btn bank" id="bankBtn">점수 가져가기</button>
+        <button class="action-btn next" id="nextBtn" style="display:none;">다음 모둠 →</button>
+      </div>
+    </div>
+
+    <div class="leaderboard">
+      <h3>모둠별 누적 점수</h3>
+      <div id="lbList"></div>
+    </div>
+
+    <button class="rule-toggle" id="logToggleBtn">진행 기록 보기</button>
+    <div id="log"></div>
+  </div>
+
+  <div id="result">
+    <div class="modal-card">
+      <div class="result-emoji">🏆</div>
+      <h2 id="resultTitle">모둠 1 우승!</h2>
+      <p>모든 라운드가 끝났어요. 최종 순위예요.</p>
+      <div id="resultBoard"></div>
+      <button class="start-btn" id="playAgainBtn">다시 하기</button>
+    </div>
+  </div>
+
+  <footer>수학 동아리 · 확률과 기대값으로 배우는 전략적 멈춤</footer>
+</div>
+
+<script>
+  const PIP_LAYOUTS = {
+    1: [4],
+    2: [0,8],
+    3: [0,4,8],
+    4: [0,2,6,8],
+    5: [0,2,4,6,8],
+    6: [0,2,3,5,6,8]
+  };
+
+  let teamCount = 5;
+  let teamNamesInput = ['모둠 1','모둠 2','모둠 3','모둠 4','모둠 5'];
+  let numRounds = 5;
+  let bustSet = new Set([1]);
+
+  let teams = [];
+  let currentRound = 1;
+  let currentTeamIdx = 0;
+  let turnScore = 0;
+  let lastRoll = null;
+  let turnEnded = false;
+  let turnResult = null; // 'bust' | 'bank' | null
+  let gameOver = false;
+  let logEntries = [];
+  let history = [];
+
+  function currentTeam(){ return teams[currentTeamIdx]; }
+
+  function log(msg){ logEntries.unshift(msg); }
+
+  function snapshot(){
+    return JSON.stringify({ teams, currentRound, currentTeamIdx, turnScore, lastRoll, turnEnded, turnResult, gameOver, logEntries });
+  }
+  function pushUndo(){
+    history.push(snapshot());
+    document.getElementById('undoBtn').disabled = false;
+  }
+  function restore(s){
+    const st = JSON.parse(s);
+    teams = st.teams; currentRound = st.currentRound; currentTeamIdx = st.currentTeamIdx;
+    turnScore = st.turnScore; lastRoll = st.lastRoll; turnEnded = st.turnEnded;
+    turnResult = st.turnResult; gameOver = st.gameOver; logEntries = st.logEntries;
+  }
+  function undo(){
+    if(history.length === 0) return;
+    restore(history.pop());
+    document.getElementById('undoBtn').disabled = history.length === 0;
+    renderGame();
+  }
+
+  /* ---------- setup screen ---------- */
+  function renderTeamNameInputs(){
+    const wrap = document.getElementById('teamNames');
+    wrap.innerHTML = '';
+    for(let i=0;i<teamCount;i++){
+      if(teamNamesInput[i] === undefined) teamNamesInput[i] = `모둠 ${i+1}`;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = teamNamesInput[i];
+      input.addEventListener('input', () => { teamNamesInput[i] = input.value; });
+      wrap.appendChild(input);
+    }
+    teamNamesInput = teamNamesInput.slice(0, teamCount);
+  }
+
+  function renderBustRow(){
+    const row = document.getElementById('bustRow');
+    row.innerHTML = '';
+    for(let n=1;n<=6;n++){
+      const label = document.createElement('label');
+      label.className = 'bust-chip' + (bustSet.has(n) ? ' active' : '');
+      label.innerHTML = `<input type="checkbox" ${bustSet.has(n)?'checked':''}> ${n}`;
+      label.querySelector('input').addEventListener('change', (e) => {
+        if(e.target.checked) bustSet.add(n); else bustSet.delete(n);
+        renderBustRow();
+        renderMathBox();
+      });
+      row.appendChild(label);
+    }
+  }
+
+  function renderMathBox(){
+    const box = document.getElementById('mathBox');
+    const bustCount = bustSet.size || 1;
+    const safeCount = 6 - bustCount;
+    const pSafe = safeCount / 6;
+    let rows = '';
+    for(let n=1;n<=8;n++){
+      const p = Math.pow(pSafe, n) * 100;
+      rows += `<tr><td>${n}번</td><td>${p.toFixed(1)}%</td></tr>`;
+    }
+    let nonBustSum = 0;
+    for(let n=1;n<=6;n++) if(!bustSet.has(n)) nonBustSum += n;
+    const breakeven = bustCount > 0 ? (nonBustSum / bustCount) : null;
+
+    box.innerHTML = `
+      <b>도입에 쓸 수 있는 확률 포인트</b>
+      <p>버스트 숫자가 ${bustSet.size ? [...bustSet].sort().join(', ') : '(선택 안 됨)'} 로 ${bustCount}개 설정되어 있으면, 한 번 안전할 확률은 ${safeCount}/6(${(pSafe*100).toFixed(1)}%)예요. 연속으로 안전할 확률은 아래처럼 빠르게 줄어들어요.</p>
+      <table class="math-table">
+        <tr><th>연속 횟수</th><th>안전할 확률</th></tr>
+        ${rows}
+      </table>
+      <div class="breakeven">
+        기대값으로 계산하면, 이번 턴에 <b>${breakeven ? breakeven.toFixed(1) : '-'}점</b> 정도 쌓였을 때부터는 더 굴리는 것보다 "가져가기"가 수학적으로 더 유리해져요. 게임이 끝난 뒤 이 숫자를 공개하면서 자기 선택과 비교해보게 하면 좋아요.
+      </div>
+    `;
+  }
+
+  document.getElementById('teamCountInput').addEventListener('input', (e) => {
+    let v = parseInt(e.target.value, 10);
+    if(isNaN(v)) return;
+    v = Math.max(2, Math.min(8, v));
+    teamCount = v;
+    renderTeamNameInputs();
+  });
+  document.getElementById('roundCountInput').addEventListener('input', (e) => {
+    let v = parseInt(e.target.value, 10);
+    if(isNaN(v) || v < 1) return;
+    numRounds = v;
+  });
+  document.getElementById('ruleToggleBtn').addEventListener('click', () => {
+    document.getElementById('ruleBox').classList.toggle('show');
+  });
+  document.getElementById('mathToggleBtn').addEventListener('click', () => {
+    document.getElementById('mathBox').classList.toggle('show');
+  });
+
+  function startGame(){
+    if(bustSet.size === 0){ bustSet.add(1); renderBustRow(); renderMathBox(); }
+    teams = [];
+    for(let i=0;i<teamCount;i++){
+      teams.push({ name: (teamNamesInput[i] && teamNamesInput[i].trim()) || `모둠 ${i+1}`, total: 0 });
+    }
+    currentRound = 1;
+    currentTeamIdx = 0;
+    turnScore = 0;
+    lastRoll = null;
+    turnEnded = false;
+    turnResult = null;
+    gameOver = false;
+    logEntries = [];
+    history = [];
+    log(`게임 시작 · 모둠 ${teams.length}개 · ${numRounds}라운드 · 버스트 숫자 [${[...bustSet].sort().join(', ')}]`);
+    log('--- 라운드 1 시작 ---');
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').classList.add('show');
+    document.getElementById('result').classList.remove('show');
+    document.getElementById('undoBtn').disabled = true;
+    renderGame();
+  }
+
+  function restart(){
+    if(!gameOver && teams.length && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
+    document.getElementById('game').classList.remove('show');
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('result').classList.remove('show');
+  }
+
+  /* ---------- game actions ---------- */
+  function rollDice(){
+    if(gameOver || turnEnded) return;
+    pushUndo();
+    const roll = 1 + Math.floor(Math.random() * 6);
+    lastRoll = roll;
+    if(bustSet.has(roll)){
+      log(`${currentTeam().name} 🎲${roll} → 버스트! 이번 턴 ${turnScore}점 날아감`);
+      turnScore = 0;
+      turnResult = 'bust';
+      turnEnded = true;
+    } else {
+      turnScore += roll;
+      turnResult = null;
+      log(`${currentTeam().name} 🎲${roll} → 이번 턴 누적 ${turnScore}점`);
+    }
+    renderGame();
+  }
+
+  function bankScore(){
+    if(gameOver || turnEnded || turnScore <= 0) return;
+    pushUndo();
+    currentTeam().total += turnScore;
+    log(`${currentTeam().name} 점수 가져가기! +${turnScore}점 (누적 ${currentTeam().total}점)`);
+    turnResult = 'bank';
+    turnEnded = true;
+    renderGame();
+  }
+
+  function nextTurn(){
+    if(!turnEnded || gameOver) return;
+    pushUndo();
+    currentTeamIdx++;
+    turnScore = 0;
+    lastRoll = null;
+    turnResult = null;
+    turnEnded = false;
+    if(currentTeamIdx >= teams.length){
+      currentTeamIdx = 0;
+      currentRound++;
+      if(currentRound > numRounds){
+        gameOver = true;
+        log('게임 종료!');
+      } else {
+        log(`--- 라운드 ${currentRound} 시작 ---`);
+      }
+    }
+    renderGame();
+  }
+
+  /* ---------- render ---------- */
+  function renderDie(){
+    const dieEl = document.getElementById('die');
+    dieEl.innerHTML = '';
+    dieEl.classList.remove('bust-face');
+    const face = lastRoll || 0;
+    const active = PIP_LAYOUTS[face] || [];
+    if(face && bustSet.has(face)) dieEl.classList.add('bust-face');
+    for(let i=0;i<9;i++){
+      const pip = document.createElement('div');
+      pip.className = 'pip' + (active.includes(i) ? ' show' : '');
+      dieEl.appendChild(pip);
+    }
+    // 애니메이션 재생을 위해 클래스 재부착
+    dieEl.classList.remove('rolling');
+    void dieEl.offsetWidth;
+    if(lastRoll !== null) dieEl.classList.add('rolling');
+  }
+
+  /* 등수만 계산하고, 행 순서는 모둠 순서 그대로 고정 (점수 바뀔 때마다 줄이 바뀌면 헷갈려서) */
+  function computeRanks(){
+    const sortedScores = teams.map(t => t.total).slice().sort((a,b) => b - a);
+    return teams.map(t => sortedScores.indexOf(t.total) + 1);
+  }
+
+  function renderLeaderboard(){
+    const list = document.getElementById('lbList');
+    const ranks = computeRanks();
+    list.innerHTML = teams.map((t, idx) => `
+      <div class="lb-row ${!gameOver && idx === currentTeamIdx ? 'current' : ''}">
+        <span class="lb-rank">${ranks[idx]}위</span>
+        <span class="lb-name">${t.name}</span>
+        <span class="lb-score">${t.total}점</span>
+      </div>
+    `).join('');
+  }
+
+  function renderGame(){
+    document.getElementById('roundIndicator').textContent = gameOver
+      ? `게임 종료 (${numRounds}라운드 완료)`
+      : `라운드 ${currentRound} / ${numRounds}`;
+
+    if(!gameOver){
+      document.getElementById('turnTeamName').textContent = currentTeam().name;
+    }
+    document.getElementById('turnScoreVal').textContent = turnScore;
+    renderDie();
+
+    const msgEl = document.getElementById('turnMsg');
+    if(turnResult === 'bust'){
+      msgEl.textContent = '😱 버스트! 이번 턴 점수를 모두 잃었어요';
+      msgEl.className = 'turn-msg bust';
+    } else if(turnResult === 'bank'){
+      msgEl.textContent = '✅ 안전하게 점수를 챙겼어요!';
+      msgEl.className = 'turn-msg bank';
+    } else {
+      msgEl.textContent = '';
+      msgEl.className = 'turn-msg';
+    }
+
+    document.getElementById('rollBtn').style.display = turnEnded ? 'none' : '';
+    document.getElementById('bankBtn').style.display = turnEnded ? 'none' : '';
+    document.getElementById('bankBtn').disabled = turnScore <= 0;
+    document.getElementById('nextBtn').style.display = (turnEnded && !gameOver) ? '' : 'none';
+
+    renderLeaderboard();
+
+    document.getElementById('log').innerHTML = logEntries.map(e => `<div>${e}</div>`).join('');
+    document.getElementById('undoBtn').disabled = history.length === 0;
+
+    if(gameOver){
+      const sorted = teams.slice().sort((a,b) => b.total - a.total);
+      document.getElementById('resultTitle').textContent = `${sorted[0].name} 우승!`;
+      document.getElementById('resultBoard').innerHTML = sorted.map((t, i) => `
+        <div class="lb-row">
+          <span class="lb-rank">${i+1}</span>
+          <span class="lb-name">${t.name}</span>
+          <span class="lb-score">${t.total}점</span>
+        </div>
+      `).join('');
+      document.getElementById('result').classList.add('show');
+    } else {
+      document.getElementById('result').classList.remove('show');
+    }
+  }
+
+  document.getElementById('rollBtn').addEventListener('click', rollDice);
+  document.getElementById('bankBtn').addEventListener('click', bankScore);
+  document.getElementById('nextBtn').addEventListener('click', nextTurn);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('playAgainBtn').addEventListener('click', restart);
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('logToggleBtn').addEventListener('click', () => {
+    const logEl = document.getElementById('log');
+    const nowShown = logEl.classList.toggle('show');
+    document.getElementById('logToggleBtn').textContent = nowShown ? '진행 기록 숨기기' : '진행 기록 보기';
+  });
+
+  renderTeamNameInputs();
+  renderBustRow();
+  renderMathBox();
+</script>
+</body>
+</html>
