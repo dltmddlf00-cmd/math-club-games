@@ -107,8 +107,14 @@
     box-shadow: 0 10px 22px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.05);
     display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:4px;
   }
-  .die.rolling{ animation: die-roll .35s ease; }
-  @keyframes die-roll{ 0%{ transform:rotate(0deg) scale(1); } 40%{ transform:rotate(-14deg) scale(1.08); } 70%{ transform:rotate(10deg) scale(1.04); } 100%{ transform:rotate(0deg) scale(1); } }
+  .die.rolling{ animation: die-roll .4s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes die-roll{ 0%{ transform:rotate(0deg) scale(1.22); } 100%{ transform:rotate(0deg) scale(1); } }
+  .die.suspense{
+    box-shadow: 0 10px 22px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.05),
+      0 0 0 3px rgba(242,183,5,.65), 0 0 18px 4px rgba(242,183,5,.4);
+    animation: suspense-pulse .18s ease-in-out infinite;
+  }
+  @keyframes suspense-pulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.25); } }
   .pip{ border-radius:50%; background:var(--ink); opacity:0; align-self:center; justify-self:center; width:14px; height:14px; }
   .pip.show{ opacity:1; }
   .die.bust-face .pip.show{ background:var(--danger); }
@@ -307,7 +313,7 @@
     turnResult = st.turnResult; gameOver = st.gameOver; logEntries = st.logEntries;
   }
   function undo(){
-    if(history.length === 0) return;
+    if(history.length === 0 || isAnimating) return;
     restore(history.pop());
     document.getElementById('undoBtn').disabled = history.length === 0;
     renderGame();
@@ -416,6 +422,7 @@
   }
 
   function restart(){
+    if(isAnimating) return;
     if(!gameOver && teams.length && !confirm('현재 게임을 종료하고 처음 설정 화면으로 돌아갈까요?')) return;
     document.getElementById('game').classList.remove('show');
     document.getElementById('setup').style.display = 'block';
@@ -423,8 +430,9 @@
   }
 
   /* ---------- game actions ---------- */
-  function rollDice(){
-    if(gameOver || turnEnded) return;
+  let isAnimating = false;
+
+  function performRoll(){
     pushUndo();
     const roll = 1 + Math.floor(Math.random() * 6);
     lastRoll = roll;
@@ -441,8 +449,57 @@
     renderGame();
   }
 
+  /* 주사위가 빠르게 여러 숫자를 보여주다가 점점 느려지며 결과에 멈추는 연출 - 결과 공개 전 긴장감용 */
+  function paintDieFace(face, bustColor){
+    const dieEl = document.getElementById('die');
+    dieEl.innerHTML = '';
+    dieEl.classList.toggle('bust-face', !!bustColor);
+    const active = PIP_LAYOUTS[face] || [];
+    for(let i=0;i<9;i++){
+      const pip = document.createElement('div');
+      pip.className = 'pip' + (active.includes(i) ? ' show' : '');
+      dieEl.appendChild(pip);
+    }
+  }
+
+  function handleRollClick(){
+    if(gameOver || turnEnded || isAnimating) return;
+    isAnimating = true;
+    const dieEl = document.getElementById('die');
+    dieEl.classList.remove('rolling', 'shaking');
+    document.getElementById('rollBtn').disabled = true;
+    document.getElementById('bankBtn').disabled = true;
+    document.getElementById('undoBtn').disabled = true;
+
+    /* 실제로 "빠르게 흔들리다 점점 느려지며 멈추는" 느낌을 내기 위해,
+       흔들림 각도(intensity)와 다음 틱까지의 대기시간을 둘 다 매 틱마다 키워서
+       화면에서 눈에 보이게 감속시킴. 막판에는 골드 테두리로 긴장감을 한 번 더 끌어올림. */
+    const totalTicks = 11;
+    let tick = 0;
+    function flicker(){
+      const progress = tick / (totalTicks - 1); // 0 → 1
+      const intensity = Math.pow(1 - progress, 1.6); // 처음엔 크게 흔들리다 급격히 잦아듦
+      const angle = (Math.random() * 2 - 1) * 18 * intensity;
+      const scale = 1 + 0.1 * intensity;
+      dieEl.style.transform = `rotate(${angle.toFixed(1)}deg) scale(${scale.toFixed(2)})`;
+      dieEl.classList.toggle('suspense', progress > 0.6);
+      paintDieFace(1 + Math.floor(Math.random() * 6), false);
+      tick++;
+      if(tick < totalTicks){
+        const delay = 45 * Math.pow(1.32, tick);
+        setTimeout(flicker, delay);
+      } else {
+        dieEl.style.transform = '';
+        dieEl.classList.remove('suspense');
+        isAnimating = false;
+        performRoll();
+      }
+    }
+    flicker();
+  }
+
   function bankScore(){
-    if(gameOver || turnEnded || turnScore <= 0) return;
+    if(gameOver || turnEnded || turnScore <= 0 || isAnimating) return;
     pushUndo();
     currentTeam().total += turnScore;
     log(`${currentTeam().name} 점수 가져가기! +${turnScore}점 (누적 ${currentTeam().total}점)`);
@@ -452,7 +509,7 @@
   }
 
   function nextTurn(){
-    if(!turnEnded || gameOver) return;
+    if(!turnEnded || gameOver || isAnimating) return;
     pushUndo();
     currentTeamIdx++;
     turnScore = 0;
@@ -475,16 +532,10 @@
   /* ---------- render ---------- */
   function renderDie(){
     const dieEl = document.getElementById('die');
-    dieEl.innerHTML = '';
-    dieEl.classList.remove('bust-face');
     const face = lastRoll || 0;
-    const active = PIP_LAYOUTS[face] || [];
-    if(face && bustSet.has(face)) dieEl.classList.add('bust-face');
-    for(let i=0;i<9;i++){
-      const pip = document.createElement('div');
-      pip.className = 'pip' + (active.includes(i) ? ' show' : '');
-      dieEl.appendChild(pip);
-    }
+    paintDieFace(face, !!(face && bustSet.has(face)));
+    dieEl.style.transform = '';
+    dieEl.classList.remove('suspense');
     // 애니메이션 재생을 위해 클래스 재부착
     dieEl.classList.remove('rolling');
     void dieEl.offsetWidth;
@@ -533,6 +584,7 @@
     }
 
     document.getElementById('rollBtn').style.display = turnEnded ? 'none' : '';
+    document.getElementById('rollBtn').disabled = false;
     document.getElementById('bankBtn').style.display = turnEnded ? 'none' : '';
     document.getElementById('bankBtn').disabled = turnScore <= 0;
     document.getElementById('nextBtn').style.display = (turnEnded && !gameOver) ? '' : 'none';
@@ -558,7 +610,7 @@
     }
   }
 
-  document.getElementById('rollBtn').addEventListener('click', rollDice);
+  document.getElementById('rollBtn').addEventListener('click', handleRollClick);
   document.getElementById('bankBtn').addEventListener('click', bankScore);
   document.getElementById('nextBtn').addEventListener('click', nextTurn);
   document.getElementById('undoBtn').addEventListener('click', undo);
