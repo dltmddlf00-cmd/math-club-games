@@ -8,17 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #eef2fb;
-    --bg-grid: #d7e1f6;
+    --bg: #ffffff;
     --surface: #ffffff;
     --ink: #1b2140;
-    --muted: #666f91;
+    --muted: #6b7280;
     --heading: #1e2761;
     --accent: #f2b705;
     --p1: #2f6fed;
     --p2: #e0505a;
-    --border: #cbd6ee;
-    --shadow: rgba(30, 39, 97, 0.14);
+    --border: #e5e7ee;
+    --shadow: rgba(30, 39, 97, 0.08);
   }
 
   * { box-sizing: border-box; }
@@ -27,10 +26,6 @@
     margin: 0;
     min-height: 100vh;
     background: var(--bg);
-    background-image:
-      linear-gradient(var(--bg-grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
-    background-size: 28px 28px;
     color: var(--ink);
     font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
   }
@@ -43,19 +38,42 @@
 
   header { text-align: center; margin-bottom: 44px; }
 
+  .top-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
   .eyebrow {
+    display: inline-block;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.14em;
-    color: var(--accent-ink, #8a6100);
+    color: #8a6100;
     text-transform: uppercase;
+    background: #fdf3d4;
+    padding: 5px 14px;
+    border-radius: 999px;
+  }
+
+  .credit-top {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    background: #f7f8fb;
+    border: 1px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 999px;
   }
 
   h1 {
     font-family: "Black Han Sans", "Noto Sans KR", sans-serif;
     font-size: clamp(34px, 5vw, 52px);
     color: var(--heading);
-    margin: 8px 0 10px;
+    margin: 14px 0 10px;
   }
 
   header p {
@@ -81,10 +99,13 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
-  a.card:hover { transform: translateY(-4px); }
+  a.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px rgba(30, 39, 97, 0.12);
+  }
 
   .glyph {
     width: 56px;
@@ -147,7 +168,10 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="eyebrow">Math Club Games</div>
+      <div class="top-row">
+        <div class="eyebrow">Math Club Games</div>
+        <div class="credit-top">만든 사람: 승일T</div>
+      </div>
       <h1>수학 동아리 게임</h1>
       <p>직접 만든 게임들을 모아뒀어요 — 원하는 게임을 눌러 시작하세요.</p>
     </header>
